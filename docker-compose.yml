@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: veyra-postgres
+    environment:
+      POSTGRES_DB: veyra_db
+      POSTGRES_USER: veyra_user
+      POSTGRES_PASSWORD: veyra_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U veyra_user -d veyra_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  veyra-app:
+    build: .
+    container_name: veyra-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/veyra_db
+      SPRING_DATASOURCE_USERNAME: veyra_user
+      SPRING_DATASOURCE_PASSWORD: veyra_pass
+      JWT_SECRET: veyra-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm
+
+volumes:
+  postgres_data:

@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: veyra-api
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/veyra_db}
+    username: ${SPRING_DATASOURCE_USERNAME:veyra_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:veyra_pass}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update        # İlk geliştirmede 'update', production'da 'validate' olacak
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+
+jwt:
+  secret: ${JWT_SECRET:veyra-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm}
+  expiration: 86400000        # 24 saat (ms)
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+
+server:
+  port: 8080
