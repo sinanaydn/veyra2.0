@@ -60,6 +60,13 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage(), ex.getErrorCode(), ex.getHttpStatus()));
     }
 
+    @ExceptionHandler(BusinessRuleException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBusinessRule(BusinessRuleException ex) {
+        return ResponseEntity
+                .status(ex.getHttpStatus())
+                .body(ApiResponse.error(ex.getMessage(), ex.getErrorCode(), ex.getHttpStatus()));
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity

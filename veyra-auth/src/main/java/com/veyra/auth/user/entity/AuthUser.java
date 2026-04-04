@@ -12,6 +12,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.SQLRestriction;
 
 /**
  * Kimlik doğrulama bilgilerini tutar: e-posta, şifre (hash), rol.
@@ -26,6 +27,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table(name = "auth_users")
+@SQLRestriction("deleted = false")
 public class AuthUser extends BaseEntity {
 
     @Column(nullable = false, unique = true)

@@ -24,7 +24,8 @@ public final class ErrorCodes {
     public static final String BRAND_ALREADY_EXISTS  = "BRAND_ALREADY_EXISTS";
 
     // CarModel
-    public static final String CAR_MODEL_NOT_FOUND   = "CAR_MODEL_NOT_FOUND";
+    public static final String CAR_MODEL_NOT_FOUND      = "CAR_MODEL_NOT_FOUND";
+    public static final String CAR_MODEL_ALREADY_EXISTS = "CAR_MODEL_ALREADY_EXISTS";
 
     // Car
     public static final String CAR_NOT_FOUND         = "CAR_NOT_FOUND";

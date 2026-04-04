@@ -1,3 +1,6 @@
+# Claude Code memory (not project code)
+.claude/
+
 # Maven build output
 target/
 !.mvn/wrapper/maven-wrapper.jar

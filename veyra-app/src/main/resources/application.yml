@@ -41,3 +41,7 @@ management:
 
 server:
   port: 8080
+
+admin:
+  email: ${ADMIN_EMAIL:admin@veyra.com}
+  password: ${ADMIN_PASSWORD:Admin1234!}

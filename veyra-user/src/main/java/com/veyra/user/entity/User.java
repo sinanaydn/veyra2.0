@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.SQLRestriction;
 
 /**
  * Kullanıcı profil bilgilerini tutar.
@@ -21,6 +22,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table(name = "users")
+@SQLRestriction("deleted = false")
 public class User extends BaseEntity {
 
     @Column(nullable = false)
