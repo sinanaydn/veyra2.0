@@ -35,6 +35,7 @@ public final class ErrorCodes {
     public static final String RENTAL_NOT_FOUND      = "RENTAL_NOT_FOUND";
     public static final String RENTAL_ALREADY_ACTIVE = "RENTAL_ALREADY_ACTIVE";
     public static final String RENTAL_NOT_ACTIVE     = "RENTAL_NOT_ACTIVE";
+    public static final String RENTAL_DATE_INVALID   = "RENTAL_DATE_INVALID";
 
     // Payment
     public static final String PAYMENT_NOT_FOUND     = "PAYMENT_NOT_FOUND";
