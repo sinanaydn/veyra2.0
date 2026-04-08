@@ -1,63 +1,40 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Bu dosya proje **geneline** ait bilgileri içerir. Modüle özgü detaylar için ilgili modülün içindeki `SKILL.md` dosyasına bakın.
 
-## Build & Run Commands
+---
 
-All Maven commands must be run from `veyra-api/`:
+## Build & Run
+
+Tüm Maven komutları `veyra-api/` dizininden çalıştırılır.
 
 ```bash
-# Build entire project
-mvn clean install -DskipTests
-
-# Run the application locally (requires Docker PostgreSQL running)
-mvn -pl veyra-app spring-boot:run
-
-# Run with Docker (PostgreSQL only — app runs locally)
-docker-compose up -d
+mvn clean install -DskipTests           # Tüm projeyi build et
+mvn -pl veyra-app spring-boot:run       # Uygulamayı lokalde çalıştır
+docker-compose up -d                    # PostgreSQL'i Docker'da başlat
 ```
 
-Default server: `http://localhost:8080`  
-Swagger UI: `http://localhost:8080/swagger-ui/index.html`
-
-Default admin credentials (seeded on first start):
-- Email: `admin@veyra.com`
-- Password: `Admin1234!`
+- Server: `http://localhost:8080`
+- Swagger: `http://localhost:8080/swagger-ui/index.html`
 
 ---
 
-## Module Status
+## Modüller
 
-| Module | Status | Notes |
-|--------|--------|-------|
-| `veyra-core` | ✅ Complete | BaseEntity, ApiResponse, exceptions, GlobalExceptionHandler, ErrorCodes, ApiConstants |
-| `veyra-auth` | ✅ Complete | JWT, SecurityConfig, AdminSeeder, register/login |
-| `veyra-user` | ✅ Complete | CRUD, UserRules, UserMapper |
-| `veyra-vehicle` | ✅ Complete | brand + model + car — tüm katmanlar |
-| `veyra-rental` | ✅ Complete | Kiralama oluştur, iade, iptal, kendi kiralamaları |
-| `veyra-payment` | ⏳ Next | Placeholder — henüz implement edilmedi |
-| `veyra-app` | ✅ Complete | VeyraApplication, SwaggerConfig, application.yml |
+| Modül | Sorumluluk | Detay |
+|-------|------------|-------|
+| `veyra-core` | BaseEntity, ApiResponse, exceptions, ErrorCodes | `veyra-core/SKILL.md` |
+| `veyra-auth` | JWT auth, SecurityConfig, AdminSeeder | `veyra-auth/SKILL.md` |
+| `veyra-user` | User profile CRUD | `veyra-user/SKILL.md` |
+| `veyra-vehicle` | brand + model + car | `veyra-vehicle/SKILL.md` |
+| `veyra-rental` | Kiralama akışı | `veyra-rental/SKILL.md` |
+| `veyra-payment` | Ödeme simülasyonu | `veyra-payment/SKILL.md` |
+| `veyra-app` | Spring Boot entry point, config | `veyra-app/SKILL.md` |
 
----
-
-## Module Architecture
-
-Multi-module Maven project under `veyra-api/`:
-
-| Module | Purpose |
-|--------|---------|
-| `veyra-core` | `BaseEntity`, `ApiResponse<T>`, `PageResponse<T>`, exceptions (`BusinessRuleException` dahil), `ErrorCodes`, `GlobalExceptionHandler` |
-| `veyra-auth` | JWT auth, `JwtAuthenticationFilter`, `SecurityConfig`, `AdminSeeder` |
-| `veyra-user` | User profile CRUD — auth credentials bu modülde değil |
-| `veyra-vehicle` | `brand/` + `model/` + `car/` — tam implement |
-| `veyra-rental` | `Rental` entity, kiralama akışı — `CarRules` + `UserRules` kullanır |
-| `veyra-payment` | Ödeme simülasyonu — **henüz boş** |
-| `veyra-app` | Spring Boot entry point; aggregates all modules |
-
-**Dependency direction (unidirectional):**
+**Bağımlılık yönü (tek yönlü):**
 ```
-veyra-app → tüm modüller
-veyra-payment → veyra-core, veyra-rental, veyra-vehicle
+veyra-app     → tüm modüller
+veyra-payment → veyra-core, veyra-rental, veyra-vehicle, veyra-user
 veyra-rental  → veyra-core, veyra-vehicle, veyra-user
 veyra-vehicle → veyra-core
 veyra-user    → veyra-core
@@ -67,138 +44,75 @@ veyra-core    → (hiçbir şey)
 
 ---
 
-## Package Layout (per domain module)
+## Paket Düzeni (her domain modülü)
 
 ```
 com.veyra.<module>.<domain>/
-├── entity/       # JPA entities (@SQLRestriction("deleted = false") zorunlu)
-├── repository/   # Spring Data JPA repositories
-├── service/      # Interfaces — controllers depend on these, never the impl
-├── manager/      # Service implementations
-├── rules/        # Business rule validation — getByIdOrThrow pattern kullanılır
-├── controller/   # REST endpoints
-├── dto/
-│   ├── request/
-│   └── response/
+├── entity/       # JPA entities — @SQLRestriction("deleted = false") zorunlu
+├── repository/   # Spring Data JPA
+├── service/      # Interface — controller buna bağımlı
+├── manager/      # Service implementation
+├── rules/        # İş kuralı validasyonu — getByIdOrThrow pattern
+├── controller/   # REST endpoint'ler
+├── dto/request/  # Validation annotations'lı DTO'lar
+├── dto/response/
 ├── mapper/       # MapStruct
 └── enums/
 ```
 
 ---
 
-## Key Patterns
+## Evrensel Kurallar (tüm modüllerde geçerli)
 
-### Rules Pattern — getByIdOrThrow
-Her Rules sınıfında hem varlık kontrolü hem fetch tek metotta:
-```java
-public Brand getByIdOrThrow(Long id) {
-    return brandRepository.findById(id)
-        .orElseThrow(() -> new ResourceNotFoundException(ErrorCodes.BRAND_NOT_FOUND, "..."));
-}
-```
-Manager asla `repository.findById().orElseThrow()` yazmaz — Rules'a devreder.
+### Rules pattern — `getByIdOrThrow`
+Her Rules sınıfı varlık kontrolü + fetch'i tek metotta yapar. Manager **asla** `repository.findById().orElseThrow()` yazmaz; Rules'a devreder.
 
-### Update Uniqueness Check
-Update'te `AndIdNot` kullanılır — aksi hâlde aynı isimde kendi kaydı false positive verir:
-```java
-// Repository
-boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
-// Rules
-public void checkIfBrandNameExistsForUpdate(String name, Long id) { ... }
-```
+### Soft delete
+`deleted = true` + `save()` — asla `deleteById()`. Her entity'de `@SQLRestriction("deleted = false")` zorunlu.
 
-### Soft Delete
-- `BaseEntity.deleted = false` → `setDeleted(true)` + `save()` — asla `deleteById()`
-- Her entity'de `@SQLRestriction("deleted = false")` zorunlu — aksi hâlde `findAll()` silinmiş kayıtları getirir
+### Update uniqueness
+Update'te `existsByXxxAndIdNot(...)` kullanılır — kendi kaydı false positive vermesin.
 
-### Exception Hierarchy
+### Exception hierarchy
 ```
 BusinessException (abstract)
 ├── ResourceNotFoundException  → 404
 ├── AlreadyExistsException     → 409
 ├── UnauthorizedException      → 401
 ├── ForbiddenException         → 403
-└── BusinessRuleException      → 422  ← iş kuralı ihlali (araç müsait değil, tarih geçersiz vb.)
+└── BusinessRuleException      → 422
 ```
-`GlobalExceptionHandler` tümünü yakalar. Controller ve Manager'da try-catch yok.
+`GlobalExceptionHandler` hepsini yakalar. Controller/Manager'da try-catch yok.
 
-### ApiResponse Envelope
+### `@Transactional`
+- Yazma metotları: `@Transactional`
+- Okuma metotları: `@Transactional(readOnly = true)`
+
+### `ApiResponse<T>` envelope
+Tüm endpoint'ler `ApiResponse<T>` döndürür:
 ```json
 { "success": true, "status": 200, "message": "...", "data": {...}, "errorCode": null, "timestamp": "..." }
 ```
-
-### @Transactional Kuralı
-- Yazma metotları: `@Transactional`
-- Okuma metotları: `@Transactional(readOnly = true)`
 
 ---
 
 ## API Base Paths
 
-| Path | Module | Auth |
-|------|---------|------|
-| `/api/v1/auth/**` | veyra-auth | Public |
-| `/api/v1/users/**` | veyra-user | ADMIN only |
-| `/api/v1/brands/**` | veyra-vehicle | GET: authenticated, POST/PUT/DELETE: ADMIN |
-| `/api/v1/models/**` | veyra-vehicle | GET: authenticated, POST/PUT/DELETE: ADMIN |
-| `/api/v1/cars/**` | veyra-vehicle | GET: authenticated, POST/PUT/DELETE: ADMIN |
-| `/api/v1/rentals/**` | veyra-rental | GET/POST/cancel: USER+ADMIN, complete: ADMIN |
-| `/api/v1/payments/**` | veyra-payment | Henüz implement edilmedi |
+| Path | Modül |
+|------|-------|
+| `/api/v1/auth/**` | veyra-auth |
+| `/api/v1/users/**` | veyra-user |
+| `/api/v1/brands/**`, `/models/**`, `/cars/**` | veyra-vehicle |
+| `/api/v1/rentals/**` | veyra-rental |
+| `/api/v1/payments/**` | veyra-payment |
+
+Endpoint detayları ve yetki kuralları için ilgili modülün `SKILL.md` dosyasına bakın.
 
 ---
 
-## Database & Auth
+## Veritabanı & Auth
 
-- **PostgreSQL 17** — Docker ile çalıştırılır, uygulama lokalde (`mvn spring-boot:run`)
-- `ddl-auto: update` — dev ortamı; production'da `validate`
-- **Soft delete** — `deleted = true`, asla `DELETE FROM`
-- **JWT** — stateless; token: `email`, `userId`, `role`; 24 saat geçerli
-- **AdminSeeder** — ilk başlatmada `admin@veyra.com` / `Admin1234!` otomatik oluşturulur
-- `AuthUser` ve `User` ayrı tablolar — `AuthUser.userId` soft reference (JPA FK değil)
-
----
-
-## Enum Locations
-
-| Enum | Lokasyon | Değerler |
-|------|----------|---------|
-| `Role` | `veyra-auth/.../role/Role.java` | `ADMIN`, `USER` |
-| `CarStatus` | `veyra-vehicle/.../car/enums/CarStatus.java` | `AVAILABLE`, `RENTED`, `MAINTENANCE` |
-| `RentalStatus` | `veyra-rental/.../enums/RentalStatus.java` | `ACTIVE`, `COMPLETED`, `CANCELLED` |
-| `PaymentStatus` | `veyra-payment/.../enums/PaymentStatus.java` | Henüz oluşturulmadı |
-
----
-
-## Rental Business Flow
-
-```
-create():
-  1. checkIfDatesValid(start, end)
-  2. carRules.getByIdOrThrow(carId) → araç var mı
-  3. carRules.checkIfCarAvailable(car) → AVAILABLE mı
-  4. rentalRules.checkIfCarAlreadyRented(carId) → aktif kiralama var mı
-  5. userRules.checkIfUserExists(userId)
-  6. totalPrice = günSayısı × dailyPrice
-  7. Rental kaydet + car.status = RENTED
-
-complete(id):
-  1. rentalRules.getByIdOrThrow(id)
-  2. rentalRules.checkIfRentalIsActive(rental)
-  3. rental.status = COMPLETED + car.status = AVAILABLE
-
-cancel(id):
-  1. rentalRules.getByIdOrThrow(id)
-  2. rentalRules.checkIfRentalIsActive(rental)
-  3. rental.status = CANCELLED + car.status = AVAILABLE
-```
-
----
-
-## Sıradaki Adım
-
-**`veyra-payment`** implement edilecek:
-- `PaymentStatus` enum: `PENDING`, `COMPLETED`, `FAILED`, `REFUNDED`
-- `Payment` entity: `rentalId` (soft ref), `userId` (soft ref), `amount`, `status`
-- `PaymentRules`: `checkIfPaymentAlreadyDone`, `getByIdOrThrow`
-- `PaymentManager.pay(rentalId)`: kiralama var mı + zaten ödendi mi → ödeme oluştur
-- `GET /api/v1/payments/{id}`, `POST /api/v1/payments` endpoints
+- **PostgreSQL 17** — Docker, app lokalde
+- `ddl-auto: update` (dev) / `validate` (prod)
+- **JWT** — stateless; claims: `email`, `userId`, `role`; 24 saat
+- **AdminSeeder** — ilk başlatmada `admin@veyra.com` / `Admin1234!` oluşturur
