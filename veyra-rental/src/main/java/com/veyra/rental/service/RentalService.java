@@ -7,13 +7,13 @@ import java.util.List;
 
 public interface RentalService {
 
-    RentalResponse create(CreateRentalRequest request);
+    RentalResponse create(CreateRentalRequest request, String email);
 
-    RentalResponse complete(Long id);   // Araç iade
+    RentalResponse complete(Long id);
 
-    RentalResponse cancel(Long id);     // İptal
+    RentalResponse cancel(Long id, String email, boolean isAdmin);
 
-    RentalResponse getById(Long id);
+    RentalResponse getById(Long id, String email, boolean isAdmin);
 
     List<RentalResponse> getAll();
 

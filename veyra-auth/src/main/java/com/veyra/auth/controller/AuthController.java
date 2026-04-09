@@ -1,6 +1,7 @@
 package com.veyra.auth.controller;
 
 import com.veyra.auth.dto.request.LoginRequest;
+import com.veyra.auth.dto.request.RefreshRequest;
 import com.veyra.auth.dto.request.RegisterRequest;
 import com.veyra.auth.dto.response.AuthResponse;
 import com.veyra.auth.service.AuthService;
@@ -35,5 +36,20 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request) {
 
         return ResponseEntity.ok(ApiResponse.success(authService.login(request)));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<AuthResponse>> refresh(
+            @Valid @RequestBody RefreshRequest request) {
+
+        return ResponseEntity.ok(ApiResponse.success(authService.refresh(request)));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @Valid @RequestBody RefreshRequest request) {
+
+        authService.logout(request);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

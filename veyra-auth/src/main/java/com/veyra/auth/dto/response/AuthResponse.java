@@ -12,7 +12,9 @@ import lombok.NoArgsConstructor;
 public class AuthResponse {
 
     private String token;
-    private long   expiresIn;  // ms cinsinden (frontend için)
+    private long   expiresIn;        // access token — ms cinsinden (frontend için)
+    private String refreshToken;
+    private long   refreshExpiresIn; // refresh token — ms cinsinden
     private String role;
     private Long   userId;
     private String email;

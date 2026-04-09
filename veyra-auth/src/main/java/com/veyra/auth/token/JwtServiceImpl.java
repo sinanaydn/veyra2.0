@@ -4,6 +4,7 @@ import com.veyra.auth.role.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -26,11 +27,26 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class JwtServiceImpl implements JwtService {
 
+    private static final int MIN_SECRET_BYTES = 32; // HS256 için minimum 256 bit
+
     @Value("${jwt.secret}")
     private String secret;
 
     @Value("${jwt.expiration}")
     private long expiration;
+
+    @PostConstruct
+    void validateSecret() {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException(
+                    "JWT_SECRET env var set edilmemiş. Uygulama başlatılamaz.");
+        }
+        if (secret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                    "JWT_SECRET en az 32 byte (256 bit) olmalıdır. Mevcut uzunluk: "
+                    + secret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length + " byte.");
+        }
+    }
 
     @Override
     public String generateToken(UserDetails userDetails, Long userId, Role role) {

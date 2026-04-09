@@ -1,5 +1,7 @@
 package com.veyra.rental.manager;
 
+import com.veyra.core.constants.ErrorCodes;
+import com.veyra.core.exception.ForbiddenException;
 import com.veyra.rental.dto.request.CreateRentalRequest;
 import com.veyra.rental.dto.response.RentalResponse;
 import com.veyra.rental.entity.Rental;
@@ -33,21 +35,24 @@ public class RentalManager implements RentalService {
 
     @Override
     @Transactional
-    public RentalResponse create(CreateRentalRequest request) {
+    public RentalResponse create(CreateRentalRequest request, String email) {
         rentalRules.checkIfDatesValid(request.getStartDate(), request.getEndDate());
 
-        var car = carRules.getByIdOrThrow(request.getCarId());
+        // Aynı araç için eş zamanlı istekleri önlemek adına satır kilidi alınır.
+        // İkinci işlem bu commit'e kadar bu noktada bekler; commit'ten sonra
+        // checkIfCarAvailable veya checkIfCarAlreadyRented hatasıyla dönerse sağlıklı 422 üretir.
+        var car = carRules.getByIdOrThrowForUpdate(request.getCarId());
         carRules.checkIfCarAvailable(car);
         rentalRules.checkIfCarAlreadyRented(request.getCarId());
 
-        userRules.checkIfUserExists(request.getUserId());
+        Long userId = userRules.getUserIdByEmail(email);
 
         long days = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate());
         BigDecimal totalPrice = car.getDailyPrice().multiply(BigDecimal.valueOf(days));
 
         var rental = Rental.builder()
                 .carId(request.getCarId())
-                .userId(request.getUserId())
+                .userId(userId)
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .totalPrice(totalPrice)
@@ -55,7 +60,6 @@ public class RentalManager implements RentalService {
 
         rentalRepository.save(rental);
 
-        // Araç durumunu RENTED yap
         car.setStatus(CarStatus.RENTED);
         carRepository.save(car);
 
@@ -81,14 +85,22 @@ public class RentalManager implements RentalService {
 
     @Override
     @Transactional
-    public RentalResponse cancel(Long id) {
+    public RentalResponse cancel(Long id, String email, boolean isAdmin) {
         var rental = rentalRules.getByIdOrThrow(id);
+
+        if (!isAdmin) {
+            Long currentUserId = userRules.getUserIdByEmail(email);
+            if (!rental.getUserId().equals(currentUserId)) {
+                throw new ForbiddenException(ErrorCodes.ACCESS_DENIED,
+                        "Bu kiralama size ait değil");
+            }
+        }
+
         rentalRules.checkIfRentalIsActive(rental);
 
         rental.setStatus(RentalStatus.CANCELLED);
         rentalRepository.save(rental);
 
-        // İptal edilince araç tekrar AVAILABLE
         var car = carRules.getByIdOrThrow(rental.getCarId());
         car.setStatus(CarStatus.AVAILABLE);
         carRepository.save(car);
@@ -98,8 +110,18 @@ public class RentalManager implements RentalService {
 
     @Override
     @Transactional(readOnly = true)
-    public RentalResponse getById(Long id) {
-        return rentalMapper.toResponse(rentalRules.getByIdOrThrow(id));
+    public RentalResponse getById(Long id, String email, boolean isAdmin) {
+        var rental = rentalRules.getByIdOrThrow(id);
+
+        if (!isAdmin) {
+            Long currentUserId = userRules.getUserIdByEmail(email);
+            if (!rental.getUserId().equals(currentUserId)) {
+                throw new ForbiddenException(ErrorCodes.ACCESS_DENIED,
+                        "Bu kiralama size ait değil");
+            }
+        }
+
+        return rentalMapper.toResponse(rental);
     }
 
     @Override

@@ -22,6 +22,13 @@ public class CarRules {
                         ErrorCodes.CAR_NOT_FOUND, "Araç bulunamadı: " + id));
     }
 
+    // Kiralama oluşturma sırasında kullanılır — satırı kilitler (SELECT ... FOR UPDATE)
+    public Car getByIdOrThrowForUpdate(Long id) {
+        return carRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorCodes.CAR_NOT_FOUND, "Araç bulunamadı: " + id));
+    }
+
     // veyra-rental tarafından da kullanılacak kritik kural
     public void checkIfCarAvailable(Car car) {
         if (car.getStatus() != CarStatus.AVAILABLE)

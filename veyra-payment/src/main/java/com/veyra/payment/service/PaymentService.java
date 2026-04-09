@@ -7,9 +7,9 @@ import java.util.List;
 
 public interface PaymentService {
 
-    PaymentResponse pay(CreatePaymentRequest request);
+    PaymentResponse pay(CreatePaymentRequest request, String email, boolean isAdmin);
 
-    PaymentResponse getById(Long id);
+    PaymentResponse getById(Long id, String email, boolean isAdmin);
 
     List<PaymentResponse> getAll();
 

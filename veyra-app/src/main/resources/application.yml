@@ -19,8 +19,11 @@ spring:
     open-in-view: false
 
 jwt:
-  secret: ${JWT_SECRET:veyra-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm}
-  expiration: 86400000        # 24 saat (ms)
+  # JWT_SECRET env var zorunludur — fallback yoktur.
+  # HS256 için en az 32 karakter (256 bit) olmalıdır.
+  secret: ${JWT_SECRET}
+  expiration: 900000              # 15 dakika (ms) — kısa ömürlü access token
+  refresh-expiration-days: 7      # 7 gün — refresh token DB'de saklanır, revoke edilebilir
 
 springdoc:
   api-docs:
@@ -44,4 +47,6 @@ server:
 
 admin:
   email: ${ADMIN_EMAIL:admin@veyra.com}
-  password: ${ADMIN_PASSWORD:Admin1234!}
+  # ADMIN_PASSWORD env var zorunludur — fallback yoktur.
+  # Uygulama bu değer set edilmeden başlatılmamalıdır.
+  password: ${ADMIN_PASSWORD}

@@ -1,12 +1,15 @@
 package com.veyra.auth.manager;
 
 import com.veyra.auth.dto.request.LoginRequest;
+import com.veyra.auth.dto.request.RefreshRequest;
 import com.veyra.auth.dto.request.RegisterRequest;
 import com.veyra.auth.dto.response.AuthResponse;
 import com.veyra.auth.role.Role;
 import com.veyra.auth.rules.AuthRules;
 import com.veyra.auth.service.AuthService;
 import com.veyra.auth.token.JwtService;
+import com.veyra.auth.token.RefreshToken;
+import com.veyra.auth.token.RefreshTokenService;
 import com.veyra.auth.user.entity.AuthUser;
 import com.veyra.auth.user.repository.AuthUserRepository;
 import com.veyra.core.constants.ErrorCodes;
@@ -40,11 +43,15 @@ public class AuthManager implements AuthService {
     private final AuthUserRepository authUserRepository;
     private final UserService        userService;
     private final JwtService         jwtService;
+    private final RefreshTokenService refreshTokenService;
     private final PasswordEncoder    passwordEncoder;
     private final AuthRules          authRules;
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
+
+    @Value("${jwt.refresh-expiration-days}")
+    private long refreshExpirationDays;
 
     @Override
     @Transactional
@@ -69,13 +76,16 @@ public class AuthManager implements AuthService {
 
         authUserRepository.save(authUser);
 
-        String token = generateToken(authUser);
+        String accessToken = generateToken(authUser);
+        RefreshToken refreshToken = refreshTokenService.create(authUser.getId());
 
-        return buildResponse(authUser, token);
+        return buildResponse(authUser, accessToken, refreshToken.getToken());
     }
 
     @Override
+    @Transactional
     public AuthResponse login(LoginRequest request) {
+
         AuthUser authUser = authUserRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UnauthorizedException(
                         ErrorCodes.INVALID_CREDENTIALS, "E-posta veya şifre hatalı"));
@@ -84,9 +94,33 @@ public class AuthManager implements AuthService {
             throw new UnauthorizedException(ErrorCodes.INVALID_CREDENTIALS, "E-posta veya şifre hatalı");
         }
 
-        String token = generateToken(authUser);
+        // Önceki oturumları temizle — global logout tutarlılığı için
+        refreshTokenService.revokeAllByAuthUserId(authUser.getId());
 
-        return buildResponse(authUser, token);
+        String accessToken = generateToken(authUser);
+        RefreshToken refreshToken = refreshTokenService.create(authUser.getId());
+
+        return buildResponse(authUser, accessToken, refreshToken.getToken());
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse refresh(RefreshRequest request) {
+        RefreshToken rotated = refreshTokenService.validateAndRotate(request.getRefreshToken());
+
+        AuthUser authUser = authUserRepository.findById(rotated.getAuthUserId())
+                .orElseThrow(() -> new UnauthorizedException(
+                        ErrorCodes.TOKEN_INVALID, "Refresh token'a ait kullanıcı bulunamadı"));
+
+        String accessToken = generateToken(authUser);
+        return buildResponse(authUser, accessToken, rotated.getToken());
+    }
+
+    @Override
+    @Transactional
+    public void logout(RefreshRequest request) {
+        // Token geçersizse sessizce geçer — idempotent logout
+        refreshTokenService.revokeByToken(request.getRefreshToken());
     }
 
     // ------------------------------------------------------------------ //
@@ -103,10 +137,12 @@ public class AuthManager implements AuthService {
         return jwtService.generateToken(userDetails, authUser.getUserId(), authUser.getRole());
     }
 
-    private AuthResponse buildResponse(AuthUser authUser, String token) {
+    private AuthResponse buildResponse(AuthUser authUser, String accessToken, String refreshToken) {
         return AuthResponse.builder()
-                .token(token)
+                .token(accessToken)
                 .expiresIn(jwtExpiration)
+                .refreshToken(refreshToken)
+                .refreshExpiresIn(refreshExpirationDays * 24 * 60 * 60 * 1000L)
                 .role(authUser.getRole().name())
                 .userId(authUser.getUserId())
                 .email(authUser.getEmail())

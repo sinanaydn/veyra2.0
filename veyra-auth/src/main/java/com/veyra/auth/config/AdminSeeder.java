@@ -35,6 +35,12 @@ public class AdminSeeder implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        if (adminPassword == null || adminPassword.isBlank()) {
+            throw new IllegalStateException(
+                    "ADMIN_PASSWORD env var set edilmemiş. " +
+                    "Uygulama güvensiz varsayılan şifre olmadan başlatılamaz.");
+        }
+
         if (authUserRepository.existsByEmail(adminEmail)) return;
 
         var userResponse = userService.create(

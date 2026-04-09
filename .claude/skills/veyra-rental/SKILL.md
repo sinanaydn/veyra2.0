@@ -17,7 +17,7 @@ Kiralama operasyonlarını yönetir. Bir araç kiralandığında `Car.status = R
 | `totalPrice` | `BigDecimal(10,2)` | Hesaplanır |
 | `status` | `RentalStatus` | default `ACTIVE` |
 
-Soft reference: modüller arası bağımlılığı gevşetmek için JPA `@ManyToOne` yerine sadece ID tutulur. `Car` ve `User` lazy fetch yok — service katmanında ihtiyaç oldukça `CarRules.getByIdOrThrow` ile çekilir.
+Soft reference: modüller arası bağımlılığı gevşetmek için JPA `@ManyToOne` yerine sadece ID tutulur.
 
 ## RentalStatus Enum
 
@@ -46,18 +46,22 @@ Soft reference: modüller arası bağımlılığı gevşetmek için JPA `@ManyTo
 
 ## İş Akışları
 
-### create(request)
+### create(request, email) — USER + ADMIN
 ```
 1. checkIfDatesValid(start, end)
-2. car = carRules.getByIdOrThrow(carId)
-3. carRules.checkIfCarAvailable(car)         → CarStatus.AVAILABLE mı
-4. rentalRules.checkIfCarAlreadyRented(carId) → aktif kiralama yoksa
-5. userRules.checkIfUserExists(userId)
+2. car = carRules.getByIdOrThrowForUpdate(carId)   ← Pessimistic Lock (SELECT FOR UPDATE)
+3. carRules.checkIfCarAvailable(car)
+4. rentalRules.checkIfCarAlreadyRented(carId)
+5. userId = userRules.getUserIdByEmail(email)       ← Authentication'dan türetilir, client'tan ALINMAZ
 6. days = ChronoUnit.DAYS.between(start, end)
 7. totalPrice = car.dailyPrice × days
 8. Rental kaydet (status=ACTIVE)
-9. car.status = RENTED → carRepository.save(car)
+9. car.status = RENTED → save
 ```
+
+**Race condition koruması:** `getByIdOrThrowForUpdate` araç satırını kilitler.
+Eş zamanlı ikinci istek bu lock'u bekler; ilk commit'ten sonra `checkIfCarAvailable` veya
+`checkIfCarAlreadyRented` ile güvenli 422 üretir.
 
 ### complete(id) — sadece ADMIN
 ```
@@ -68,12 +72,22 @@ Soft reference: modüller arası bağımlılığı gevşetmek için JPA `@ManyTo
 5. car.status = AVAILABLE → save
 ```
 
-### cancel(id) — USER + ADMIN
+### cancel(id, email, isAdmin) — USER + ADMIN
 ```
 1. rental = rentalRules.getByIdOrThrow(id)
-2. rentalRules.checkIfRentalIsActive(rental)
-3. rental.status = CANCELLED
-4. car.status = AVAILABLE → save
+2. isAdmin? → ownership kontrolü atlanır
+   değilse → userRules.getUserIdByEmail(email) → rental.userId ile karşılaştır → eşleşmezse 403
+3. rentalRules.checkIfRentalIsActive(rental)
+4. rental.status = CANCELLED
+5. car.status = AVAILABLE → save
+```
+
+### getById(id, email, isAdmin) — USER + ADMIN
+```
+1. rental = rentalRules.getByIdOrThrow(id)
+2. isAdmin? → ownership kontrolü atlanır
+   değilse → userId = getUserIdByEmail(email) → rental.userId ile karşılaştır → eşleşmezse 403
+3. response döndür
 ```
 
 ### getMyRentals(email)
@@ -88,20 +102,26 @@ Soft reference: modüller arası bağımlılığı gevşetmek için JPA `@ManyTo
 
 | Method | Path | Auth | Açıklama |
 |--------|------|------|---------|
-| POST | `/api/v1/rentals` | USER+ADMIN | Yeni kiralama |
+| POST | `/api/v1/rentals` | USER+ADMIN | Yeni kiralama — userId authentication'dan alınır |
 | POST | `/api/v1/rentals/{id}/complete` | **ADMIN** | İade |
-| POST | `/api/v1/rentals/{id}/cancel` | USER+ADMIN | İptal |
-| GET | `/api/v1/rentals/{id}` | USER+ADMIN | Tek kayıt (ownership kontrolü YOK — TODO) |
-| GET | `/api/v1/rentals/my` | USER+ADMIN | Kendi kiralamalar |
+| POST | `/api/v1/rentals/{id}/cancel` | USER+ADMIN | İptal — USER yalnızca kendi kiraladığını iptal edebilir |
+| GET | `/api/v1/rentals/{id}` | USER+ADMIN | Tek kayıt — USER yalnızca kendine ait görebilir |
+| GET | `/api/v1/rentals/my` | USER+ADMIN | Kendi kiralamaları |
 | GET | `/api/v1/rentals?userId=X` | **ADMIN** | Tüm/filtreli liste |
 
 ### CreateRentalRequest
 - `carId` `@NotNull`
-- `userId` `@NotNull`
 - `startDate` `@NotNull` `@FutureOrPresent`
 - `endDate` `@NotNull` `@Future`
 
+**`userId` alanı yoktur** — kullanıcı kimliği her zaman JWT'den türetilir.
+
+## Güvenlik & Yetki Pattern'i
+- Controller: `Authentication authentication` inject → `SecurityUtils.isAdmin(authentication)` ile rol kontrolü
+- Service: `(id, email, isAdmin)` imzası
+- Manager: `isAdmin` true ise ownership kontrolü atlanır; false ise `getUserIdByEmail(email)` → entity.userId karşılaştırması
+
 ## Bağımlılıklar
-- `veyra-core`
-- `veyra-vehicle` — `CarRules`, `CarRepository` (status update için), `CarStatus`
+- `veyra-core` — SecurityUtils, ForbiddenException, ErrorCodes
+- `veyra-vehicle` — `CarRules`, `CarRepository` (status update + lock), `CarStatus`
 - `veyra-user` — `UserRules`

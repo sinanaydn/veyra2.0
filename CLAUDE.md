@@ -115,4 +115,4 @@ Endpoint detayları ve yetki kuralları için ilgili modülün `SKILL.md` dosyas
 - **PostgreSQL 17** — Docker, app lokalde
 - `ddl-auto: update` (dev) / `validate` (prod)
 - **JWT** — stateless; claims: `email`, `userId`, `role`; 24 saat
-- **AdminSeeder** — ilk başlatmada `admin@veyra.com` / `Admin1234!` oluşturur
+- **AdminSeeder** — ilk başlatmada `ADMIN_EMAIL` / `ADMIN_PASSWORD` env var'larından admin oluşturur; `ADMIN_PASSWORD` zorunludur, set edilmezse startup durur

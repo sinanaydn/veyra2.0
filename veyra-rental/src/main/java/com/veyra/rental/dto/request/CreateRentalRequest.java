@@ -17,9 +17,6 @@ public class CreateRentalRequest {
     @NotNull(message = "Araç ID boş bırakılamaz")
     private Long carId;
 
-    @NotNull(message = "Kullanıcı ID boş bırakılamaz")
-    private Long userId;
-
     @NotNull(message = "Başlangıç tarihi boş bırakılamaz")
     @FutureOrPresent(message = "Başlangıç tarihi geçmişte olamaz")
     private LocalDate startDate;

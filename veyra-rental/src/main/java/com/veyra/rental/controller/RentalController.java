@@ -2,6 +2,7 @@ package com.veyra.rental.controller;
 
 import com.veyra.core.constants.ApiConstants;
 import com.veyra.core.response.ApiResponse;
+import com.veyra.core.util.SecurityUtils;
 import com.veyra.rental.dto.request.CreateRentalRequest;
 import com.veyra.rental.dto.response.RentalResponse;
 import com.veyra.rental.service.RentalService;
@@ -29,8 +30,11 @@ public class RentalController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<ApiResponse<RentalResponse>> create(@Valid @RequestBody CreateRentalRequest request) {
-        return ResponseEntity.status(201).body(ApiResponse.created(rentalService.create(request)));
+    public ResponseEntity<ApiResponse<RentalResponse>> create(
+            @Valid @RequestBody CreateRentalRequest request,
+            Authentication authentication) {
+        return ResponseEntity.status(201).body(
+                ApiResponse.created(rentalService.create(request, authentication.getName())));
     }
 
     @PostMapping("/{id}/complete")
@@ -41,14 +45,22 @@ public class RentalController {
 
     @PostMapping("/{id}/cancel")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<ApiResponse<RentalResponse>> cancel(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success(rentalService.cancel(id)));
+    public ResponseEntity<ApiResponse<RentalResponse>> cancel(
+            @PathVariable Long id,
+            Authentication authentication) {
+        boolean isAdmin = SecurityUtils.isAdmin(authentication);
+        return ResponseEntity.ok(ApiResponse.success(
+                rentalService.cancel(id, authentication.getName(), isAdmin)));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<ApiResponse<RentalResponse>> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success(rentalService.getById(id)));
+    public ResponseEntity<ApiResponse<RentalResponse>> getById(
+            @PathVariable Long id,
+            Authentication authentication) {
+        boolean isAdmin = SecurityUtils.isAdmin(authentication);
+        return ResponseEntity.ok(ApiResponse.success(
+                rentalService.getById(id, authentication.getName(), isAdmin)));
     }
 
     @GetMapping("/my")
@@ -66,4 +78,5 @@ public class RentalController {
                 : rentalService.getAll();
         return ResponseEntity.ok(ApiResponse.success(result));
     }
+
 }

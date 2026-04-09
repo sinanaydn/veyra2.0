@@ -2,6 +2,7 @@ package com.veyra.auth.filter;
 
 import com.veyra.auth.token.JwtService;
 import com.veyra.auth.user.service.AuthUserDetailsService;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -47,7 +48,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String token = authHeader.substring(BEARER_PREFIX.length());
-        String email = jwtService.extractEmail(token);
+
+        String email;
+        try {
+            email = jwtService.extractEmail(token);
+        } catch (JwtException | IllegalArgumentException e) {
+            // Bozuk, süresi dolmuş veya imzası geçersiz token — SecurityContext boş kalır,
+            // Spring Security korumalı endpoint'lere 401 döndürür.
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         // Email çıkartıldı ve henüz kimlik doğrulanmadıysa kontrol et
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {

@@ -2,6 +2,7 @@ package com.veyra.payment.controller;
 
 import com.veyra.core.constants.ApiConstants;
 import com.veyra.core.response.ApiResponse;
+import com.veyra.core.util.SecurityUtils;
 import com.veyra.payment.dto.request.CreatePaymentRequest;
 import com.veyra.payment.dto.response.PaymentResponse;
 import com.veyra.payment.service.PaymentService;
@@ -29,14 +30,22 @@ public class PaymentController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<ApiResponse<PaymentResponse>> pay(@Valid @RequestBody CreatePaymentRequest request) {
-        return ResponseEntity.status(201).body(ApiResponse.created(paymentService.pay(request)));
+    public ResponseEntity<ApiResponse<PaymentResponse>> pay(
+            @Valid @RequestBody CreatePaymentRequest request,
+            Authentication authentication) {
+        boolean isAdmin = SecurityUtils.isAdmin(authentication);
+        return ResponseEntity.status(201).body(
+                ApiResponse.created(paymentService.pay(request, authentication.getName(), isAdmin)));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<ApiResponse<PaymentResponse>> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success(paymentService.getById(id)));
+    public ResponseEntity<ApiResponse<PaymentResponse>> getById(
+            @PathVariable Long id,
+            Authentication authentication) {
+        boolean isAdmin = SecurityUtils.isAdmin(authentication);
+        return ResponseEntity.ok(ApiResponse.success(
+                paymentService.getById(id, authentication.getName(), isAdmin)));
     }
 
     @GetMapping("/my")
@@ -54,4 +63,5 @@ public class PaymentController {
                 : paymentService.getAll();
         return ResponseEntity.ok(ApiResponse.success(result));
     }
+
 }

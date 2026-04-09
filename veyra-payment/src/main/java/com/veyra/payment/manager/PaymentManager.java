@@ -1,5 +1,7 @@
 package com.veyra.payment.manager;
 
+import com.veyra.core.constants.ErrorCodes;
+import com.veyra.core.exception.ForbiddenException;
 import com.veyra.payment.dto.request.CreatePaymentRequest;
 import com.veyra.payment.dto.response.PaymentResponse;
 import com.veyra.payment.entity.Payment;
@@ -28,14 +30,18 @@ public class PaymentManager implements PaymentService {
 
     @Override
     @Transactional
-    public PaymentResponse pay(CreatePaymentRequest request) {
-        // Kiralama var mı?
+    public PaymentResponse pay(CreatePaymentRequest request, String email, boolean isAdmin) {
         Rental rental = rentalRules.getByIdOrThrow(request.getRentalId());
 
-        // Kiralama aktif mi?
-        rentalRules.checkIfRentalIsActive(rental);
+        if (!isAdmin) {
+            Long currentUserId = userRules.getUserIdByEmail(email);
+            if (!rental.getUserId().equals(currentUserId)) {
+                throw new ForbiddenException(ErrorCodes.ACCESS_DENIED,
+                        "Bu kiralama için ödeme yapma yetkiniz yok");
+            }
+        }
 
-        // Zaten ödendi mi?
+        rentalRules.checkIfRentalIsActive(rental);
         paymentRules.checkIfAlreadyPaid(request.getRentalId());
 
         var payment = Payment.builder()
@@ -51,8 +57,18 @@ public class PaymentManager implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public PaymentResponse getById(Long id) {
-        return paymentMapper.toResponse(paymentRules.getByIdOrThrow(id));
+    public PaymentResponse getById(Long id, String email, boolean isAdmin) {
+        var payment = paymentRules.getByIdOrThrow(id);
+
+        if (!isAdmin) {
+            Long currentUserId = userRules.getUserIdByEmail(email);
+            if (!payment.getUserId().equals(currentUserId)) {
+                throw new ForbiddenException(ErrorCodes.ACCESS_DENIED,
+                        "Bu ödeme size ait değil");
+            }
+        }
+
+        return paymentMapper.toResponse(payment);
     }
 
     @Override

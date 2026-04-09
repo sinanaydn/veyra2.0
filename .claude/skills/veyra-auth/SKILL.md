@@ -28,9 +28,23 @@ JWT içinde `role` claim olarak taşınır. `@PreAuthorize("hasRole('ADMIN')")` 
 | `userId` | `User.id` (soft reference) |
 | `role` | `ADMIN` veya `USER` |
 | `iat` | Issued at |
-| `exp` | Expiration — **24 saat** |
+| `exp` | Expiration — **15 dakika** |
 
 Algoritma: **HS256**. Secret `application.yml`'den (`jwt.secret`).
+
+## Refresh Token
+
+DB tabanlı, revoke edilebilir. `refresh_tokens` tablosuna yazılır.
+
+| Alan | Notlar |
+|------|--------|
+| `token` | UUID, unique |
+| `authUserId` | AuthUser'a soft reference |
+| `expiresAt` | 7 gün |
+
+**Token rotation:** Her `/auth/refresh` isteğinde eski token silinir, yeni üretilir.
+**Global logout:** `/auth/logout` o kullanıcının tüm refresh token'larını siler.
+**Login:** Yeni login önceki tüm token'ları temizler (global logout tutarlılığı).
 
 ## SecurityConfig
 
@@ -58,14 +72,15 @@ Her request için:
 2. Yoksa filter chain'e devam et (public endpoint olabilir)
 3. Token varsa parse et, claims'i çıkar
 4. `SecurityContextHolder`'a `Authentication` koy (`email` principal, `role` authority)
-5. Hata olursa 401 dönmesi `GlobalExceptionHandler`'a bırakılır
+5. `JwtException | IllegalArgumentException` yakalanırsa filter zinciri devam eder ve return edilir — SecurityContext boş kalır, Spring Security korumalı endpoint'e 401 döndürür. `GlobalExceptionHandler` devrede değildir.
 
 ## AdminSeeder
 `ApplicationRunner` implementasyonu, idempotent.
 
 İlk başlatmada:
-- `admin@veyra.com` / `Admin1234!` `AuthUser` oluşturur
-- İlişkili `User` kaydı oluşturur
+- `ADMIN_EMAIL` (varsayılan `admin@veyra.com`) ve `ADMIN_PASSWORD` env var'larından credentials alır
+- `ADMIN_PASSWORD` set edilmezse `IllegalStateException` fırlatarak startup'ı durdurur
+- `AuthUser` (ADMIN rolü) ve ilişkili `User` kaydı oluşturur
 - Eğer zaten varsa hiçbir şey yapmaz (`existsByEmail` kontrolü)
 
 ## Endpoint'ler
@@ -73,7 +88,9 @@ Her request için:
 | Method | Path | Auth | Body | Açıklama |
 |--------|------|------|------|---------|
 | POST | `/api/v1/auth/register` | Public | `RegisterRequest` | Yeni kullanıcı + AuthUser oluştur |
-| POST | `/api/v1/auth/login` | Public | `LoginRequest` | Token döndür |
+| POST | `/api/v1/auth/login` | Public | `LoginRequest` | Access + refresh token döndür |
+| POST | `/api/v1/auth/refresh` | Public | `RefreshRequest` | Token rotation — yeni access + refresh token |
+| POST | `/api/v1/auth/logout` | Public | `RefreshRequest` | Kullanıcının tüm refresh token'larını sil |
 
 ### RegisterRequest
 - `firstName`, `lastName` — `@NotBlank`
@@ -94,7 +111,22 @@ Akışı:
 Akışı:
 1. `AuthUser`'ı email ile bul (yoksa `INVALID_CREDENTIALS`)
 2. BCrypt ile şifre karşılaştır
-3. JWT üret ve dön (`AuthResponse`: `token`, `email`, `role`)
+3. Önceki tüm refresh token'ları temizle (`revokeAllByAuthUserId`)
+4. Access token (15 dk) + refresh token (7 gün) üret
+5. `AuthResponse`: `token`, `refreshToken`, `expiresIn`, `refreshExpiresIn`, `email`, `role`
+
+### RefreshRequest
+- `refreshToken` — `@NotBlank`
+
+`/refresh` akışı:
+1. `authRules.getRefreshTokenOrThrow(token)` — bulunamazsa 401
+2. Süresi dolmuşsa DB'den sil → 401
+3. Token rotation: eski sil, yeni oluştur
+4. `AuthUser`'ı bul → yeni access token üret
+
+`/logout` akışı:
+1. Token'dan `authUserId` bul
+2. Kullanıcının tüm refresh token'larını sil (idempotent — token yoksa sessizce geçer)
 
 ## Bağımlılıklar
 - `veyra-core` — `ApiResponse`, exceptions
