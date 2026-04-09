@@ -59,7 +59,7 @@ class PaymentManagerOwnershipTest {
         when(userRules.getUserIdByEmail("attacker@veyra.com")).thenReturn(attackerId);
 
         assertThatThrownBy(() ->
-                paymentManager.pay(request, "attacker@veyra.com", false))
+                paymentManager.pay(request, "attacker@veyra.com", false, null))
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessageContaining("yetkiniz yok");
 
@@ -87,7 +87,7 @@ class PaymentManagerOwnershipTest {
         when(userRules.getUserIdByEmail("owner@veyra.com")).thenReturn(userId);
         when(paymentMapper.toResponse(any())).thenReturn(PaymentResponse.builder().build());
 
-        paymentManager.pay(request, "owner@veyra.com", false);
+        paymentManager.pay(request, "owner@veyra.com", false, null);
 
         verify(paymentRepository).save(any(Payment.class));
     }
@@ -112,7 +112,7 @@ class PaymentManagerOwnershipTest {
         when(paymentMapper.toResponse(any())).thenReturn(PaymentResponse.builder().build());
 
         // isAdmin=true — ownership kontrolü atlanmalı, ödeme kaydedilmeli, ekstra DB sorgusu olmamalı
-        paymentManager.pay(request, "admin@veyra.com", true);
+        paymentManager.pay(request, "admin@veyra.com", true, null);
 
         verify(paymentRepository).save(any(Payment.class));
         verify(userRules, never()).getUserIdByEmail(any());

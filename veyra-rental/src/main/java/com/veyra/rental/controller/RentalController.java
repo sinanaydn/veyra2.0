@@ -8,6 +8,7 @@ import com.veyra.rental.dto.response.RentalResponse;
 import com.veyra.rental.service.RentalService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping(ApiConstants.RENTALS)
 @RequiredArgsConstructor
@@ -39,8 +41,12 @@ public class RentalController {
 
     @PostMapping("/{id}/complete")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<RentalResponse>> complete(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success(rentalService.complete(id)));
+    public ResponseEntity<ApiResponse<RentalResponse>> complete(
+            @PathVariable Long id,
+            Authentication authentication) {
+        RentalResponse response = rentalService.complete(id);
+        log.info("Admin {} completed rental {}", authentication.getName(), id);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/{id}/cancel")

@@ -17,7 +17,6 @@ public class PaymentResponse {
 
     private Long id;
     private Long rentalId;
-    private Long userId;
     private BigDecimal amount;
     private PaymentStatus status;
     private LocalDateTime createdAt;

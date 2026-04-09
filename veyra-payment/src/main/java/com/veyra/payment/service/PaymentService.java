@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface PaymentService {
 
-    PaymentResponse pay(CreatePaymentRequest request, String email, boolean isAdmin);
+    PaymentResponse pay(CreatePaymentRequest request, String email, boolean isAdmin, String idempotencyKey);
 
     PaymentResponse getById(Long id, String email, boolean isAdmin);
 

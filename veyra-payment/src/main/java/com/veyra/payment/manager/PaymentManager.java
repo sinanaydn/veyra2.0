@@ -30,7 +30,14 @@ public class PaymentManager implements PaymentService {
 
     @Override
     @Transactional
-    public PaymentResponse pay(CreatePaymentRequest request, String email, boolean isAdmin) {
+    public PaymentResponse pay(CreatePaymentRequest request, String email, boolean isAdmin, String idempotencyKey) {
+        if (idempotencyKey != null) {
+            var existing = paymentRepository.findByIdempotencyKey(idempotencyKey);
+            if (existing.isPresent()) {
+                return paymentMapper.toResponse(existing.get());
+            }
+        }
+
         Rental rental = rentalRules.getByIdOrThrow(request.getRentalId());
 
         if (!isAdmin) {
@@ -48,6 +55,7 @@ public class PaymentManager implements PaymentService {
                 .rentalId(rental.getId())
                 .userId(rental.getUserId())
                 .amount(rental.getTotalPrice())
+                .idempotencyKey(idempotencyKey)
                 .build();
 
         paymentRepository.save(payment);

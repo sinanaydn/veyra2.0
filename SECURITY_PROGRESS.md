@@ -37,62 +37,16 @@
 
 ---
 
-## Kalan Görevler (Orta Öncelik)
+### Orta Öncelik ✅
 
-### 5. Payment Idempotency Key
-**Durum:** Yapılmadı  
-**Sorun:** Network hatası sonrası client retry'da `PAYMENT_ALREADY_DONE` 422 alıyor. `X-Idempotency-Key` header ile aynı isteğin tekrarında cached response döndürülmeli.  
-**Önerilen yaklaşım:**
-- `Payment` entity'e `idempotencyKey` (unique, nullable) alanı ekle
-- `PaymentController.pay`'de `X-Idempotency-Key` header al
-- `PaymentManager.pay`'de: key varsa mevcut kaydı bul ve döndür, yoksa normal akış
-
----
-
-### 6. BCrypt Strength Düşük
-**Durum:** Yapılmadı  
-**Sorun:** `new BCryptPasswordEncoder()` — default strength 10, minimum 12 önerilir.  
-**Dosya:** `SecurityConfig.java:89`  
-**Düzeltme:** `new BCryptPasswordEncoder(12)`  
-**Not:** Mevcut kullanıcıların hash'leri geçersiz kalmaz — BCrypt kendi strength'ini hash içinde saklar.
-
----
-
-### 7. CORS Wildcard + Credentials
-**Durum:** Yapılmadı  
-**Sorun:** `AllowedHeaders: *` ile `AllowCredentials: true` birlikte CORS spec'e aykırı.  
-**Dosya:** `SecurityConfig.java:97-98`  
-**Düzeltme:**
-```java
-config.setAllowedHeaders(List.of("Content-Type", "Authorization"));
-```
-
----
-
-### 8. Rate Limiting Yok
-**Durum:** Yapılmadı  
-**Sorun:** `/api/v1/auth/login` ve `/register` brute-force'a açık.  
-**Önerilen yaklaşım:** Spring'de built-in rate limiting yok. Seçenekler:
-- **Bucket4j** (in-memory veya Redis) — Spring Boot ile kolay entegrasyon
-- **Resilience4j RateLimiter** — zaten bağımlılık varsa tercih edilebilir  
-**Scope:** Login endpoint'i için IP bazlı, örn. 5 istek/dakika.
-
----
-
-### 9. PaymentResponse'ta userId Expose
-**Durum:** Yapılmadı  
-**Sorun:** User kendi ödemesini görürken `userId` alanı gereksiz — user enumeration riski.  
-**Dosya:** `PaymentResponse.java`  
-**Düzeltme:** `userId` alanını response'tan kaldır. Admin için gerekiyorsa ayrı DTO oluştur.
-
----
-
-### 10. Rental Complete'te Audit Log Yok
-**Durum:** Yapılmadı  
-**Sorun:** ADMIN hangi rental'ı complete ettiğinde log bırakmıyor.  
-**Dosya:** `RentalController.java` (complete metodu)  
-**Düzeltme:** `@Slf4j` + `log.info("Admin {} completed rental {}", authentication.getName(), id)`  
-**Not:** Bu endpoint şu an Authentication inject etmiyor — eklenmesi gerekiyor.
+| # | Açık | Değişen Dosyalar |
+|---|------|-----------------|
+| 5 | **Payment Idempotency Key** | `Payment` (idempotencyKey alanı), `PaymentRepository` (findByIdempotencyKey), `PaymentService`, `PaymentManager`, `PaymentController` (X-Idempotency-Key header), `PaymentManagerOwnershipTest` |
+| 6 | **BCrypt strength 10→12** | `SecurityConfig` (BCryptPasswordEncoder(12)) |
+| 7 | **CORS wildcard + credentials** | `SecurityConfig` (allowedHeaders daraltıldı) |
+| 8 | **Rate limiting (login/register)** | `RateLimitFilter` (yeni), `SecurityConfig` (filter chain), `VeyraApplication` (@EnableScheduling), `ErrorCodes` (RATE_LIMIT_EXCEEDED) |
+| 9 | **PaymentResponse userId kaldırma** | `PaymentResponse` (userId alanı silindi) |
+| 10 | **Rental complete audit log** | `RentalController` (@Slf4j, Authentication inject, log.info) |
 
 ---
 

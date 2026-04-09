@@ -41,4 +41,7 @@ public class Payment extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private PaymentStatus status = PaymentStatus.COMPLETED;
+
+    @Column(unique = true)
+    private String idempotencyKey;
 }

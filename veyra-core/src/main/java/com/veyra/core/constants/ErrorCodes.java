@@ -41,6 +41,9 @@ public final class ErrorCodes {
     public static final String PAYMENT_NOT_FOUND     = "PAYMENT_NOT_FOUND";
     public static final String PAYMENT_ALREADY_DONE  = "PAYMENT_ALREADY_DONE";
 
+    // Rate Limit
+    public static final String RATE_LIMIT_EXCEEDED   = "RATE_LIMIT_EXCEEDED";
+
     // Genel
     public static final String VALIDATION_ERROR      = "VALIDATION_ERROR";
     public static final String INTERNAL_ERROR        = "INTERNAL_ERROR";
