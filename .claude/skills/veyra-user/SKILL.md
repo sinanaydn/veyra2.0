@@ -22,11 +22,13 @@ Cross-module kullanılan yardımcı sınıf — `veyra-rental` ve `veyra-payment
 
 | Metot | Davranış |
 |-------|---------|
+| `getByIdOrThrow(id)` | `User` döndürür, yoksa `ResourceNotFoundException` (`USER_NOT_FOUND`) |
+| `getByEmailOrThrow(email)` | `User` döndürür, yoksa `ResourceNotFoundException` (`USER_NOT_FOUND`) |
 | `checkIfEmailAlreadyExists(email)` | Varsa `AlreadyExistsException` (`EMAIL_ALREADY_EXISTS`) |
 | `checkIfUserExists(id)` | Yoksa `ResourceNotFoundException` (`USER_NOT_FOUND`) |
-| `getUserIdByEmail(email)` | Email'den userId döndürür, yoksa `ResourceNotFoundException` |
+| `getUserIdByEmail(email)` | Email'den userId döndürür — `getByEmailOrThrow`'a delege eder |
 
-`getByIdOrThrow` pattern'ı `User` entity'sini doğrudan dönmez — sadece var/yok kontrolü ve ID/email mapping yapar (cross-module'da entity sızdırmamak için).
+`getByIdOrThrow` ve `getByEmailOrThrow` `User` entity döndürür (modül-içi kullanım). Cross-module'da `getUserIdByEmail` ve `checkIfUserExists` tercih edilir (entity sızdırmamak için).
 
 ## UserRepository
 | Metot | Açıklama |
@@ -34,17 +36,31 @@ Cross-module kullanılan yardımcı sınıf — `veyra-rental` ve `veyra-payment
 | `existsByEmail(String)` | Register sırasında uniqueness için |
 | `findByEmail(String)` | `getUserIdByEmail` kullanır |
 
+## User Silme Cascade (Event-Driven)
+`UserManager.delete()` kullanıcıyı soft-delete yaptıktan sonra `UserDeletedEvent(userId, email)` publish eder.
+`veyra-auth` modülündeki `UserDeletedEventListener` bu event'i dinler ve:
+1. AuthUser'ı email ile bulur → soft delete
+2. Tüm refresh token'ları revoke eder
+
+Bu sayede silinen kullanıcı sisteme tekrar giriş yapamaz.
+
 ## Endpoint'ler
 
 | Method | Path | Auth | Açıklama |
 |--------|------|------|---------|
-| POST | `/api/v1/users` | ADMIN | Yeni kullanıcı (admin tarafından) |
-| PUT | `/api/v1/users/{id}` | ADMIN | Güncelle |
+| GET | `/api/v1/users` | ADMIN | Tüm kayıtlar (pageable: `?page=0&size=20&sort=createdAt,desc`) |
 | GET | `/api/v1/users/{id}` | ADMIN | Tek kayıt |
-| GET | `/api/v1/users` | ADMIN | Tüm kayıtlar |
-| DELETE | `/api/v1/users/{id}` | ADMIN | Soft delete |
+| PUT | `/api/v1/users/{id}` | ADMIN | Profil güncelle (firstName, lastName, phone) |
+| DELETE | `/api/v1/users/{id}` | ADMIN | Soft delete + AuthUser cascade |
 
-**Tüm endpoint'ler ADMIN-only.** Kullanıcılar kendi profilini bu endpoint'lerden yönetmez — register `veyra-auth`'tan yapılır. Self-service profile update şu an yok.
+### UpdateUserRequest
+- `firstName` `@NotBlank`
+- `lastName` `@NotBlank`
+- `phone` — opsiyonel
+
+**Email güncellemesi yapılmaz** — AuthUser ile sync sorunu olur.
+
+**Tüm endpoint'ler ADMIN-only.** Register `veyra-auth`'tan yapılır.
 
 ## Bağımlılıklar
 - `veyra-core`

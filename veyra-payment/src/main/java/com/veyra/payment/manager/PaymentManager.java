@@ -1,7 +1,7 @@
 package com.veyra.payment.manager;
 
-import com.veyra.core.constants.ErrorCodes;
-import com.veyra.core.exception.ForbiddenException;
+import com.veyra.core.response.PageResponse;
+import com.veyra.core.util.SecurityUtils;
 import com.veyra.payment.dto.request.CreatePaymentRequest;
 import com.veyra.payment.dto.response.PaymentResponse;
 import com.veyra.payment.entity.Payment;
@@ -13,6 +13,7 @@ import com.veyra.rental.entity.Rental;
 import com.veyra.rental.rules.RentalRules;
 import com.veyra.user.rules.UserRules;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,14 +40,7 @@ public class PaymentManager implements PaymentService {
         }
 
         Rental rental = rentalRules.getByIdOrThrow(request.getRentalId());
-
-        if (!isAdmin) {
-            Long currentUserId = userRules.getUserIdByEmail(email);
-            if (!rental.getUserId().equals(currentUserId)) {
-                throw new ForbiddenException(ErrorCodes.ACCESS_DENIED,
-                        "Bu kiralama için ödeme yapma yetkiniz yok");
-            }
-        }
+        SecurityUtils.checkOwnership(rental.getUserId(), email, isAdmin, userRules::getUserIdByEmail);
 
         rentalRules.checkIfRentalIsActive(rental);
         paymentRules.checkIfAlreadyPaid(request.getRentalId());
@@ -67,15 +61,7 @@ public class PaymentManager implements PaymentService {
     @Transactional(readOnly = true)
     public PaymentResponse getById(Long id, String email, boolean isAdmin) {
         var payment = paymentRules.getByIdOrThrow(id);
-
-        if (!isAdmin) {
-            Long currentUserId = userRules.getUserIdByEmail(email);
-            if (!payment.getUserId().equals(currentUserId)) {
-                throw new ForbiddenException(ErrorCodes.ACCESS_DENIED,
-                        "Bu ödeme size ait değil");
-            }
-        }
-
+        SecurityUtils.checkOwnership(payment.getUserId(), email, isAdmin, userRules::getUserIdByEmail);
         return paymentMapper.toResponse(payment);
     }
 
@@ -90,12 +76,26 @@ public class PaymentManager implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
+    public PageResponse<PaymentResponse> getAll(Pageable pageable) {
+        return new PageResponse<>(paymentRepository.findAll(pageable).map(paymentMapper::toResponse));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<PaymentResponse> getAllByUserId(Long userId) {
         userRules.checkIfUserExists(userId);
         return paymentRepository.findAllByUserId(userId)
                 .stream()
                 .map(paymentMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<PaymentResponse> getAllByUserId(Long userId, Pageable pageable) {
+        userRules.checkIfUserExists(userId);
+        return new PageResponse<>(paymentRepository.findAllByUserId(userId, pageable)
+                .map(paymentMapper::toResponse));
     }
 
     @Override

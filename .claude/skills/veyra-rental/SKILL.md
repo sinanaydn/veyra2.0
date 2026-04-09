@@ -56,7 +56,7 @@ Soft reference: modüller arası bağımlılığı gevşetmek için JPA `@ManyTo
 6. days = ChronoUnit.DAYS.between(start, end)
 7. totalPrice = car.dailyPrice × days
 8. Rental kaydet (status=ACTIVE)
-9. car.status = RENTED → save
+9. carService.markAsRented(carId)              ← CarService interface üzerinden (DIP)
 ```
 
 **Race condition koruması:** `getByIdOrThrowForUpdate` araç satırını kilitler.
@@ -68,25 +68,22 @@ Eş zamanlı ikinci istek bu lock'u bekler; ilk commit'ten sonra `checkIfCarAvai
 1. rental = rentalRules.getByIdOrThrow(id)
 2. rentalRules.checkIfRentalIsActive(rental)
 3. rental.status = COMPLETED
-4. car = carRules.getByIdOrThrow(rental.carId)
-5. car.status = AVAILABLE → save
+4. carService.markAsAvailable(rental.carId)    ← CarService interface üzerinden (DIP)
 ```
 
 ### cancel(id, email, isAdmin) — USER + ADMIN
 ```
 1. rental = rentalRules.getByIdOrThrow(id)
-2. isAdmin? → ownership kontrolü atlanır
-   değilse → userRules.getUserIdByEmail(email) → rental.userId ile karşılaştır → eşleşmezse 403
+2. SecurityUtils.checkOwnership(rental.userId, email, isAdmin, userRules::getUserIdByEmail)
 3. rentalRules.checkIfRentalIsActive(rental)
 4. rental.status = CANCELLED
-5. car.status = AVAILABLE → save
+5. carService.markAsAvailable(rental.carId)
 ```
 
 ### getById(id, email, isAdmin) — USER + ADMIN
 ```
 1. rental = rentalRules.getByIdOrThrow(id)
-2. isAdmin? → ownership kontrolü atlanır
-   değilse → userId = getUserIdByEmail(email) → rental.userId ile karşılaştır → eşleşmezse 403
+2. SecurityUtils.checkOwnership(rental.userId, email, isAdmin, userRules::getUserIdByEmail)
 3. response döndür
 ```
 
@@ -107,7 +104,7 @@ Eş zamanlı ikinci istek bu lock'u bekler; ilk commit'ten sonra `checkIfCarAvai
 | POST | `/api/v1/rentals/{id}/cancel` | USER+ADMIN | İptal — USER yalnızca kendi kiraladığını iptal edebilir |
 | GET | `/api/v1/rentals/{id}` | USER+ADMIN | Tek kayıt — USER yalnızca kendine ait görebilir |
 | GET | `/api/v1/rentals/my` | USER+ADMIN | Kendi kiralamaları |
-| GET | `/api/v1/rentals?userId=X` | **ADMIN** | Tüm/filtreli liste |
+| GET | `/api/v1/rentals?userId=X` | **ADMIN** | Tüm/filtreli liste (pageable: `?page=0&size=20`) |
 
 ### CreateRentalRequest
 - `carId` `@NotNull`
@@ -119,9 +116,9 @@ Eş zamanlı ikinci istek bu lock'u bekler; ilk commit'ten sonra `checkIfCarAvai
 ## Güvenlik & Yetki Pattern'i
 - Controller: `Authentication authentication` inject → `SecurityUtils.isAdmin(authentication)` ile rol kontrolü
 - Service: `(id, email, isAdmin)` imzası
-- Manager: `isAdmin` true ise ownership kontrolü atlanır; false ise `getUserIdByEmail(email)` → entity.userId karşılaştırması
+- Manager: `SecurityUtils.checkOwnership(entityUserId, email, isAdmin, userRules::getUserIdByEmail)` — merkezi ownership kontrolü
 
 ## Bağımlılıklar
 - `veyra-core` — SecurityUtils, ForbiddenException, ErrorCodes
-- `veyra-vehicle` — `CarRules`, `CarRepository` (status update + lock), `CarStatus`
+- `veyra-vehicle` — `CarRules` (lock + validasyon), `CarService` (status değişikliği — DIP)
 - `veyra-user` — `UserRules`

@@ -138,7 +138,7 @@ class PaymentManagerOwnershipTest {
         assertThatThrownBy(() ->
                 paymentManager.getById(paymentId, "attacker@veyra.com", false))
                 .isInstanceOf(ForbiddenException.class)
-                .hasMessageContaining("size ait değil");
+                .hasMessageContaining("erişim yetkiniz yok");
     }
 
     @Test

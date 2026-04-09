@@ -2,12 +2,15 @@ package com.veyra.vehicle.car.controller;
 
 import com.veyra.core.constants.ApiConstants;
 import com.veyra.core.response.ApiResponse;
+import com.veyra.core.response.PageResponse;
 import com.veyra.vehicle.car.dto.request.CreateCarRequest;
 import com.veyra.vehicle.car.dto.request.UpdateCarRequest;
 import com.veyra.vehicle.car.dto.response.CarResponse;
 import com.veyra.vehicle.car.service.CarService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -49,11 +52,12 @@ public class CarController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<CarResponse>>> getAll(
-            @RequestParam(required = false) Boolean available) {
+    public ResponseEntity<ApiResponse<PageResponse<CarResponse>>> getAll(
+            @RequestParam(required = false) Boolean available,
+            @PageableDefault(size = 20) Pageable pageable) {
         var result = Boolean.TRUE.equals(available)
-                ? carService.getAvailable()
-                : carService.getAll();
+                ? carService.getAvailable(pageable)
+                : carService.getAll(pageable);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 

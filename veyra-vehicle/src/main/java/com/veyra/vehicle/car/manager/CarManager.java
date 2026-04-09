@@ -1,5 +1,6 @@
 package com.veyra.vehicle.car.manager;
 
+import com.veyra.core.response.PageResponse;
 import com.veyra.vehicle.car.dto.request.CreateCarRequest;
 import com.veyra.vehicle.car.dto.request.UpdateCarRequest;
 import com.veyra.vehicle.car.dto.response.CarResponse;
@@ -11,6 +12,7 @@ import com.veyra.vehicle.car.rules.CarRules;
 import com.veyra.vehicle.car.service.CarService;
 import com.veyra.vehicle.model.rules.CarModelRules;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -74,6 +76,12 @@ public class CarManager implements CarService {
 
     @Override
     @Transactional(readOnly = true)
+    public PageResponse<CarResponse> getAll(Pageable pageable) {
+        return new PageResponse<>(carRepository.findAll(pageable).map(carMapper::toResponse));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<CarResponse> getAvailable() {
         return carRepository.findAllByStatus(CarStatus.AVAILABLE)
                 .stream()
@@ -82,10 +90,34 @@ public class CarManager implements CarService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public PageResponse<CarResponse> getAvailable(Pageable pageable) {
+        return new PageResponse<>(carRepository.findAllByStatus(CarStatus.AVAILABLE, pageable)
+                .map(carMapper::toResponse));
+    }
+
+    @Override
     @Transactional
     public void delete(Long id) {
         var car = carRules.getByIdOrThrow(id);
+        carRules.checkIfCarCanBeDeleted(car);
         car.setDeleted(true);
+        carRepository.save(car);
+    }
+
+    @Override
+    @Transactional
+    public void markAsRented(Long carId) {
+        var car = carRules.getByIdOrThrow(carId);
+        car.setStatus(CarStatus.RENTED);
+        carRepository.save(car);
+    }
+
+    @Override
+    @Transactional
+    public void markAsAvailable(Long carId) {
+        var car = carRules.getByIdOrThrow(carId);
+        car.setStatus(CarStatus.AVAILABLE);
         carRepository.save(car);
     }
 }

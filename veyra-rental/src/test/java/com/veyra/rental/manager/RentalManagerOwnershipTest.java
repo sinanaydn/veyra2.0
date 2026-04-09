@@ -11,8 +11,8 @@ import com.veyra.rental.rules.RentalRules;
 import com.veyra.user.rules.UserRules;
 import com.veyra.vehicle.car.entity.Car;
 import com.veyra.vehicle.car.enums.CarStatus;
-import com.veyra.vehicle.car.repository.CarRepository;
 import com.veyra.vehicle.car.rules.CarRules;
+import com.veyra.vehicle.car.service.CarService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -33,7 +33,7 @@ class RentalManagerOwnershipTest {
     @Mock RentalRepository rentalRepository;
     @Mock RentalRules      rentalRules;
     @Mock CarRules         carRules;
-    @Mock CarRepository    carRepository;
+    @Mock CarService       carService;
     @Mock UserRules        userRules;
     @Mock RentalMapper     rentalMapper;
 
@@ -43,7 +43,6 @@ class RentalManagerOwnershipTest {
     // ------------------------------------------------------------------ create
     @Test
     void create_shouldUseEmailToResolveUserId_notRequestField() {
-        // Kullanıcı request body'de userId gönderse bile email'den türetilmeli
         CreateRentalRequest request = new CreateRentalRequest(
                 1L,
                 LocalDate.now().plusDays(1),
@@ -63,8 +62,8 @@ class RentalManagerOwnershipTest {
 
         RentalResponse response = rentalManager.create(request, email);
 
-        // userId her zaman email'den çözümlenmeli
         verify(userRules).getUserIdByEmail(email);
+        verify(carService).markAsRented(request.getCarId());
         assertThat(response.getUserId()).isEqualTo(resolvedUserId);
     }
 
@@ -90,9 +89,8 @@ class RentalManagerOwnershipTest {
         assertThatThrownBy(() ->
                 rentalManager.cancel(rentalId, "attacker@veyra.com", false))
                 .isInstanceOf(ForbiddenException.class)
-                .hasMessageContaining("size ait değil");
+                .hasMessageContaining("erişim yetkiniz yok");
 
-        // Rental asla değiştirilmemeli
         verify(rentalRepository, never()).save(any());
     }
 
@@ -110,19 +108,15 @@ class RentalManagerOwnershipTest {
                 .totalPrice(BigDecimal.valueOf(300))
                 .build();
 
-        Car car = Car.builder().status(CarStatus.RENTED).build();
-
         when(rentalRules.getByIdOrThrow(rentalId)).thenReturn(rental);
         when(userRules.getUserIdByEmail("owner@veyra.com")).thenReturn(userId);
-        when(carRules.getByIdOrThrow(rental.getCarId())).thenReturn(car);
         when(rentalMapper.toResponse(any())).thenReturn(RentalResponse.builder().build());
 
         rentalManager.cancel(rentalId, "owner@veyra.com", false);
 
         verify(rentalRepository).save(rental);
-        verify(carRepository).save(car);
+        verify(carService).markAsAvailable(rental.getCarId());
         assertThat(rental.getStatus()).isEqualTo(RentalStatus.CANCELLED);
-        assertThat(car.getStatus()).isEqualTo(CarStatus.AVAILABLE);
     }
 
     @Test
@@ -139,10 +133,7 @@ class RentalManagerOwnershipTest {
                 .totalPrice(BigDecimal.valueOf(300))
                 .build();
 
-        Car car = Car.builder().status(CarStatus.RENTED).build();
-
         when(rentalRules.getByIdOrThrow(rentalId)).thenReturn(rental);
-        when(carRules.getByIdOrThrow(rental.getCarId())).thenReturn(car);
         when(rentalMapper.toResponse(any())).thenReturn(RentalResponse.builder().build());
 
         // isAdmin=true — ownership kontrolü atlanmalı
@@ -150,6 +141,7 @@ class RentalManagerOwnershipTest {
 
         verify(userRules, never()).getUserIdByEmail(any());
         verify(rentalRepository).save(rental);
+        verify(carService).markAsAvailable(rental.getCarId());
     }
 
     // ------------------------------------------------------------------ getById
@@ -174,7 +166,7 @@ class RentalManagerOwnershipTest {
         assertThatThrownBy(() ->
                 rentalManager.getById(rentalId, "attacker@veyra.com", false))
                 .isInstanceOf(ForbiddenException.class)
-                .hasMessageContaining("size ait değil");
+                .hasMessageContaining("erişim yetkiniz yok");
     }
 
     @Test
@@ -195,7 +187,6 @@ class RentalManagerOwnershipTest {
 
         rentalManager.getById(rentalId, "admin@veyra.com", true);
 
-        // Admin için getUserIdByEmail çağrılmamalı
         verify(userRules, never()).getUserIdByEmail(any());
     }
 }

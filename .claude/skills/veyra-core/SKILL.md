@@ -38,7 +38,14 @@ JSON şekli:
 `@JsonInclude(NON_NULL)` — null alanlar JSON'a yazılmaz.
 
 ## PageResponse<T>
-Pagination için generic wrapper. Şu an aktif kullanılmıyor; pagination eklenince devreye girer.
+Pagination için generic wrapper. Tüm listeleme endpoint'lerinde aktif kullanılır (`cars`, `rentals`, `payments`, `users`). `Page<T>` alır, frontend-dostu düz yapıya dönüştürür.
+
+## UserDeletedEvent
+`com.veyra.core.event.UserDeletedEvent` — cross-module kullanıcı silme cascade'i için Spring Application Event.
+```java
+public record UserDeletedEvent(Long userId, String email) {}
+```
+`veyra-user` tarafından yayınlanır, `veyra-auth` tarafından dinlenir. AuthUser soft-delete ve refresh token revoke işlemleri bu event üzerinden tetiklenir.
 
 ## Exception Hierarchy
 
@@ -87,6 +94,16 @@ Tüm API path öneklerini merkezi tutar:
 API_V1 = "/api/v1"
 AUTH, USERS, BRANDS, CAR_MODELS, CARS, RENTALS, PAYMENTS
 ```
+
+## SecurityUtils
+`com.veyra.core.util.SecurityUtils` — controller ve manager'larda kullanılan yardımcı metotlar.
+
+| Metot | Davranış |
+|-------|---------|
+| `isAdmin(Authentication)` | `ROLE_ADMIN` authority var mı kontrol eder |
+| `checkOwnership(entityUserId, email, isAdmin, userIdResolver)` | Admin ise atlanır; değilse email'den userId çözümler ve entity sahibiyle karşılaştırır. Eşleşmezse `ForbiddenException` (`ACCESS_DENIED`) |
+
+`checkOwnership` tüm ownership kontrollerini merkezi tutar — `veyra-rental` ve `veyra-payment` bu metodu kullanır.
 
 ## Bağımlılıklar
 **Hiçbir şey.** Bu modül leaf'tir.

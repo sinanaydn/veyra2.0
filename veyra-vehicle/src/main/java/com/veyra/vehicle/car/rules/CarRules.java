@@ -35,4 +35,10 @@ public class CarRules {
             throw new BusinessRuleException(
                     ErrorCodes.CAR_NOT_AVAILABLE, "Araç şu an uygun değil: " + car.getId());
     }
+
+    public void checkIfCarCanBeDeleted(Car car) {
+        if (car.getStatus() == CarStatus.RENTED)
+            throw new BusinessRuleException(
+                    ErrorCodes.CAR_NOT_AVAILABLE, "Kirada olan araç silinemez: " + car.getId());
+    }
 }

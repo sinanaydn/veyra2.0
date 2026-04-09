@@ -75,7 +75,17 @@ JPA ilişkileri **gerçek FK** (soft reference değil — bu modül içinde):
 | Metot | Davranış |
 |-------|---------|
 | `getByIdOrThrow(id)` | Yoksa `CAR_NOT_FOUND` (404) |
+| `getByIdOrThrowForUpdate(id)` | Pessimistic lock ile fetch — kiralama sırasında race condition'ı önler |
 | `checkIfCarAvailable(car)` | `AVAILABLE` değilse `BusinessRuleException` (`CAR_NOT_AVAILABLE`, 422) |
+| `checkIfCarCanBeDeleted(car)` | `RENTED` ise `BusinessRuleException` (`CAR_NOT_AVAILABLE`, 422) — kirada olan araç silinemez |
+
+## CarService (cross-module)
+`veyra-rental.RentalManager` car status değişiklikleri için `CarService` interface'ini kullanır (DIP).
+
+| Metot | Davranış |
+|-------|---------|
+| `markAsRented(carId)` | `getByIdOrThrow` → status = RENTED → save |
+| `markAsAvailable(carId)` | `getByIdOrThrow` → status = AVAILABLE → save |
 
 ## Endpoint'ler
 
@@ -98,13 +108,14 @@ JPA ilişkileri **gerçek FK** (soft reference değil — bu modül içinde):
 | DELETE | `/api/v1/models/{id}` | ADMIN |
 
 ### Car
-| Method | Path | Auth |
-|--------|------|------|
-| POST | `/api/v1/cars` | ADMIN |
-| PUT | `/api/v1/cars/{id}` | ADMIN |
-| GET | `/api/v1/cars/{id}` | Authenticated |
-| GET | `/api/v1/cars?available=true` | Authenticated — opsiyonel filter |
-| DELETE | `/api/v1/cars/{id}` | ADMIN |
+| Method | Path | Auth | Açıklama |
+|--------|------|------|---------|
+| POST | `/api/v1/cars` | ADMIN | Yeni araç |
+| PUT | `/api/v1/cars/{id}` | ADMIN | Güncelle |
+| GET | `/api/v1/cars/{id}` | Authenticated | Tek kayıt |
+| GET | `/api/v1/cars` | Authenticated | Tüm araçlar (pageable: `?page=0&size=20`) |
+| GET | `/api/v1/cars?available=true` | Authenticated | Sadece uygun araçlar (pageable) |
+| DELETE | `/api/v1/cars/{id}` | ADMIN | Soft delete — kirada olan araç silinemez |
 
 `UpdateCarRequest` `status` alanını içerir (status manuel güncelleme — örn. MAINTENANCE'a alma).
 

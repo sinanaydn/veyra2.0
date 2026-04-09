@@ -86,9 +86,7 @@ public class AuthManager implements AuthService {
     @Transactional
     public AuthResponse login(LoginRequest request) {
 
-        AuthUser authUser = authUserRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UnauthorizedException(
-                        ErrorCodes.INVALID_CREDENTIALS, "E-posta veya şifre hatalı"));
+        AuthUser authUser = authRules.getByEmailOrThrow(request.getEmail());
 
         if (!passwordEncoder.matches(request.getPassword(), authUser.getPasswordHash())) {
             throw new UnauthorizedException(ErrorCodes.INVALID_CREDENTIALS, "E-posta veya şifre hatalı");
@@ -108,9 +106,7 @@ public class AuthManager implements AuthService {
     public AuthResponse refresh(RefreshRequest request) {
         RefreshToken rotated = refreshTokenService.validateAndRotate(request.getRefreshToken());
 
-        AuthUser authUser = authUserRepository.findById(rotated.getAuthUserId())
-                .orElseThrow(() -> new UnauthorizedException(
-                        ErrorCodes.TOKEN_INVALID, "Refresh token'a ait kullanıcı bulunamadı"));
+        AuthUser authUser = authRules.getByIdOrThrow(rotated.getAuthUserId());
 
         String accessToken = generateToken(authUser);
         return buildResponse(authUser, accessToken, rotated.getToken());

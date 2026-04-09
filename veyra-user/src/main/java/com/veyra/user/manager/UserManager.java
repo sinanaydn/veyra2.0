@@ -1,14 +1,17 @@
 package com.veyra.user.manager;
 
-import com.veyra.core.constants.ErrorCodes;
-import com.veyra.core.exception.ResourceNotFoundException;
+import com.veyra.core.event.UserDeletedEvent;
+import com.veyra.core.response.PageResponse;
 import com.veyra.user.dto.request.CreateUserRequest;
+import com.veyra.user.dto.request.UpdateUserRequest;
 import com.veyra.user.dto.response.UserResponse;
 import com.veyra.user.mapper.UserMapper;
 import com.veyra.user.repository.UserRepository;
 import com.veyra.user.rules.UserRules;
 import com.veyra.user.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,9 +21,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserManager implements UserService {
 
-    private final UserRepository userRepository;
-    private final UserMapper     userMapper;
-    private final UserRules      userRules;
+    private final UserRepository          userRepository;
+    private final UserMapper               userMapper;
+    private final UserRules                userRules;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -31,21 +35,25 @@ public class UserManager implements UserService {
     }
 
     @Override
+    @Transactional
+    public UserResponse update(Long id, UpdateUserRequest request) {
+        var user = userRules.getByIdOrThrow(id);
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setPhone(request.getPhone());
+        return userMapper.toResponse(userRepository.save(user));
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public UserResponse getById(Long id) {
-        return userRepository.findById(id)
-                .map(userMapper::toResponse)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        ErrorCodes.USER_NOT_FOUND, "Kullanıcı bulunamadı: " + id));
+        return userMapper.toResponse(userRules.getByIdOrThrow(id));
     }
 
     @Override
     @Transactional(readOnly = true)
     public UserResponse getByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .map(userMapper::toResponse)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        ErrorCodes.USER_NOT_FOUND, "Kullanıcı bulunamadı: " + email));
+        return userMapper.toResponse(userRules.getByEmailOrThrow(email));
     }
 
     @Override
@@ -58,12 +66,17 @@ public class UserManager implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public PageResponse<UserResponse> getAll(Pageable pageable) {
+        return new PageResponse<>(userRepository.findAll(pageable).map(userMapper::toResponse));
+    }
+
+    @Override
     @Transactional
     public void delete(Long id) {
-        var user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        ErrorCodes.USER_NOT_FOUND, "Kullanıcı bulunamadı: " + id));
+        var user = userRules.getByIdOrThrow(id);
         user.setDeleted(true);
         userRepository.save(user);
+        eventPublisher.publishEvent(new UserDeletedEvent(user.getId(), user.getEmail()));
     }
 }

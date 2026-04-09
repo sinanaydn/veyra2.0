@@ -128,6 +128,22 @@ Akışı:
 1. Token'dan `authUserId` bul
 2. Kullanıcının tüm refresh token'larını sil (idempotent — token yoksa sessizce geçer)
 
+## AuthRules
+| Metot | Davranış |
+|-------|---------|
+| `getByEmailOrThrow(email)` | AuthUser döndürür, yoksa `UnauthorizedException` (`INVALID_CREDENTIALS`) |
+| `getByIdOrThrow(id)` | AuthUser döndürür, yoksa `UnauthorizedException` (`TOKEN_INVALID`) |
+| `getRefreshTokenOrThrow(token)` | RefreshToken döndürür, yoksa `UnauthorizedException` |
+| `checkIfEmailAlreadyRegistered(email)` | Varsa `AlreadyExistsException` |
+
+`AuthManager` artık doğrudan repository çağrısı yapmaz — tüm entity fetch'ler `AuthRules` üzerinden yapılır.
+
+## UserDeletedEventListener
+`com.veyra.auth.event.UserDeletedEventListener` — `UserDeletedEvent` dinler.
+- AuthUser'ı email ile bulur → `deleted = true`
+- `refreshTokenService.revokeAllByAuthUserId()` ile tüm token'ları iptal eder
+- Kullanıcı silme işlemi transactional olarak `veyra-user` → event → `veyra-auth` zincirinde çalışır
+
 ## Bağımlılıklar
-- `veyra-core` — `ApiResponse`, exceptions
+- `veyra-core` — `ApiResponse`, exceptions, `UserDeletedEvent`
 - `veyra-user` — `UserRules`, `User` entity (register sırasında)

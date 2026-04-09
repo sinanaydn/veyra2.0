@@ -2,6 +2,7 @@ package com.veyra.auth.rules;
 
 import com.veyra.auth.token.RefreshToken;
 import com.veyra.auth.token.RefreshTokenRepository;
+import com.veyra.auth.user.entity.AuthUser;
 import com.veyra.auth.user.repository.AuthUserRepository;
 import com.veyra.core.constants.ErrorCodes;
 import com.veyra.core.exception.AlreadyExistsException;
@@ -33,5 +34,17 @@ public class AuthRules {
         return refreshTokenRepository.findByToken(token)
                 .orElseThrow(() -> new UnauthorizedException(
                         ErrorCodes.TOKEN_INVALID, "Geçersiz refresh token"));
+    }
+
+    public AuthUser getByEmailOrThrow(String email) {
+        return authUserRepository.findByEmail(email)
+                .orElseThrow(() -> new UnauthorizedException(
+                        ErrorCodes.INVALID_CREDENTIALS, "E-posta veya şifre hatalı"));
+    }
+
+    public AuthUser getByIdOrThrow(Long id) {
+        return authUserRepository.findById(id)
+                .orElseThrow(() -> new UnauthorizedException(
+                        ErrorCodes.TOKEN_INVALID, "Refresh token'a ait kullanıcı bulunamadı"));
     }
 }

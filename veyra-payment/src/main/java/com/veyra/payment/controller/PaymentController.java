@@ -2,12 +2,15 @@ package com.veyra.payment.controller;
 
 import com.veyra.core.constants.ApiConstants;
 import com.veyra.core.response.ApiResponse;
+import com.veyra.core.response.PageResponse;
 import com.veyra.core.util.SecurityUtils;
 import com.veyra.payment.dto.request.CreatePaymentRequest;
 import com.veyra.payment.dto.response.PaymentResponse;
 import com.veyra.payment.service.PaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -58,11 +61,12 @@ public class PaymentController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<List<PaymentResponse>>> getAll(
-            @RequestParam(required = false) Long userId) {
+    public ResponseEntity<ApiResponse<PageResponse<PaymentResponse>>> getAll(
+            @RequestParam(required = false) Long userId,
+            @PageableDefault(size = 20) Pageable pageable) {
         var result = userId != null
-                ? paymentService.getAllByUserId(userId)
-                : paymentService.getAll();
+                ? paymentService.getAllByUserId(userId, pageable)
+                : paymentService.getAll(pageable);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 

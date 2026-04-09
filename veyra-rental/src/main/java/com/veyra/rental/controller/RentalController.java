@@ -2,6 +2,7 @@ package com.veyra.rental.controller;
 
 import com.veyra.core.constants.ApiConstants;
 import com.veyra.core.response.ApiResponse;
+import com.veyra.core.response.PageResponse;
 import com.veyra.core.util.SecurityUtils;
 import com.veyra.rental.dto.request.CreateRentalRequest;
 import com.veyra.rental.dto.response.RentalResponse;
@@ -9,6 +10,8 @@ import com.veyra.rental.service.RentalService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -77,11 +80,12 @@ public class RentalController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<List<RentalResponse>>> getAll(
-            @RequestParam(required = false) Long userId) {
+    public ResponseEntity<ApiResponse<PageResponse<RentalResponse>>> getAll(
+            @RequestParam(required = false) Long userId,
+            @PageableDefault(size = 20) Pageable pageable) {
         var result = userId != null
-                ? rentalService.getAllByUserId(userId)
-                : rentalService.getAll();
+                ? rentalService.getAllByUserId(userId, pageable)
+                : rentalService.getAll(pageable);
         return ResponseEntity.ok(ApiResponse.success(result));
     }
 

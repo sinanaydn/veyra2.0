@@ -33,11 +33,22 @@ public class UserRules {
     }
 
     public Long getUserIdByEmail(String email) {
-        User user = userRepository.findByEmail(email)
+        return getByEmailOrThrow(email).getId();
+    }
+
+    public User getByIdOrThrow(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorCodes.USER_NOT_FOUND,
+                        "Kullanıcı bulunamadı: " + id
+                ));
+    }
+
+    public User getByEmailOrThrow(String email) {
+        return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         ErrorCodes.USER_NOT_FOUND,
                         "Kullanıcı bulunamadı: " + email
                 ));
-        return user.getId();
     }
 }

@@ -1,7 +1,9 @@
 package com.veyra.payment.service;
 
+import com.veyra.core.response.PageResponse;
 import com.veyra.payment.dto.request.CreatePaymentRequest;
 import com.veyra.payment.dto.response.PaymentResponse;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -13,7 +15,11 @@ public interface PaymentService {
 
     List<PaymentResponse> getAll();
 
+    PageResponse<PaymentResponse> getAll(Pageable pageable);
+
     List<PaymentResponse> getAllByUserId(Long userId);
+
+    PageResponse<PaymentResponse> getAllByUserId(Long userId, Pageable pageable);
 
     List<PaymentResponse> getMyPayments(String email);
 }
