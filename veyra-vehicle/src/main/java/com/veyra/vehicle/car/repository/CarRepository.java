@@ -15,9 +15,22 @@ import java.util.Optional;
 
 public interface CarRepository extends JpaRepository<Car, Long> {
 
-    List<Car> findAllByStatus(CarStatus status);
+    @Query("SELECT c FROM Car c JOIN FETCH c.model m JOIN FETCH m.brand")
+    List<Car> findAllWithModelAndBrand();
 
-    Page<Car> findAllByStatus(CarStatus status, Pageable pageable);
+    @Query(value = "SELECT c FROM Car c JOIN FETCH c.model m JOIN FETCH m.brand WHERE c.status = :status",
+           countQuery = "SELECT COUNT(c) FROM Car c WHERE c.status = :status")
+    Page<Car> findAllByStatusWithModelAndBrand(@Param("status") CarStatus status, Pageable pageable);
+
+    @Query("SELECT c FROM Car c JOIN FETCH c.model m JOIN FETCH m.brand WHERE c.status = :status")
+    List<Car> findAllByStatusWithModelAndBrand(@Param("status") CarStatus status);
+
+    @Query(value = "SELECT c FROM Car c JOIN FETCH c.model m JOIN FETCH m.brand",
+           countQuery = "SELECT COUNT(c) FROM Car c")
+    Page<Car> findAllWithModelAndBrand(Pageable pageable);
+
+    @Query("SELECT c FROM Car c JOIN FETCH c.model m JOIN FETCH m.brand WHERE c.id = :id")
+    Optional<Car> findByIdWithModelAndBrand(@Param("id") Long id);
 
     List<Car> findAllByModelId(Long modelId);
 

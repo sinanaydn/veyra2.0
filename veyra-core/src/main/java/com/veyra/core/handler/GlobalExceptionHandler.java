@@ -4,8 +4,10 @@ import com.veyra.core.constants.ErrorCodes;
 import com.veyra.core.exception.*;
 import com.veyra.core.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -105,6 +107,28 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.validationError(fieldErrors));
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(ConstraintViolationException ex) {
+        String message = ex.getConstraintViolations().stream()
+                .map(v -> v.getPropertyPath() + ": " + v.getMessage())
+                .collect(Collectors.joining(", "));
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(message, ErrorCodes.VALIDATION_ERROR, HttpStatus.BAD_REQUEST.value()));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMalformedJson(HttpMessageNotReadableException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(
+                        "İstek gövdesi okunamadı — JSON formatını kontrol edin",
+                        ErrorCodes.VALIDATION_ERROR,
+                        HttpStatus.BAD_REQUEST.value()
+                ));
     }
 
     // ------------------------------------------------------------------ //

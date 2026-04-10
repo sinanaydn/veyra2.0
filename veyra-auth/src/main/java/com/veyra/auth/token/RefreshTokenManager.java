@@ -1,15 +1,17 @@
 package com.veyra.auth.token;
 
-import com.veyra.auth.rules.AuthRules;
-import com.veyra.core.constants.ErrorCodes;
-import com.veyra.core.exception.UnauthorizedException;
-import lombok.RequiredArgsConstructor;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.UUID;
+import com.veyra.auth.rules.AuthRules;
+import com.veyra.core.constants.ErrorCodes;
+import com.veyra.core.exception.UnauthorizedException;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -44,9 +46,9 @@ public class RefreshTokenManager implements RefreshTokenService {
                     ErrorCodes.TOKEN_EXPIRED, "Refresh token süresi dolmuş, yeniden giriş yapın");
         }
 
-        // Token rotation — eski token silinir, yeni üretilir
+        RefreshToken newToken = create(existing.getAuthUserId());
         refreshTokenRepository.delete(existing);
-        return create(existing.getAuthUserId());
+        return newToken;
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.veyra.auth.filter.RateLimitFilter;
 import com.veyra.auth.user.service.AuthUserDetailsService;
 import com.veyra.core.constants.ApiConstants;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -42,6 +43,9 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final RateLimitFilter         rateLimitFilter;
     private final AuthUserDetailsService  userDetailsService;
+
+    @Value("${cors.allowed-origins}")
+    private String allowedOrigins;
 
     private static final String[] PUBLIC_ENDPOINTS = {
             ApiConstants.AUTH + "/**",
@@ -96,7 +100,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173"));
+        config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Content-Type", "Authorization"));
         config.setAllowCredentials(true);

@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Deque;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
@@ -22,6 +23,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final int MAX_REQUESTS = 5;
     private static final long WINDOW_MS = 60_000;
+
+    // Güvenilir proxy IP'leri — sadece bunlardan gelen X-Forwarded-For'a güvenilir
+    private static final Set<String> TRUSTED_PROXIES = Set.of(
+            "127.0.0.1", "::1", "0:0:0:0:0:0:0:1"
+    );
 
     private final Map<String, Deque<Long>> requestCounts = new ConcurrentHashMap<>();
 
@@ -63,11 +69,23 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private String resolveClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
+        String remoteAddr = request.getRemoteAddr();
+
+        // X-Forwarded-For'a sadece güvenilir proxy'den geliyorsa güven
+        if (TRUSTED_PROXIES.contains(remoteAddr)) {
+            String xff = request.getHeader("X-Forwarded-For");
+            if (xff != null && !xff.isBlank()) {
+                // En sağdaki güvenilmez IP gerçek client IP'dir (rightmost-untrusted)
+                String[] ips = xff.split(",");
+                for (int i = ips.length - 1; i >= 0; i--) {
+                    String ip = ips[i].trim();
+                    if (!TRUSTED_PROXIES.contains(ip)) {
+                        return ip;
+                    }
+                }
+            }
         }
-        return request.getRemoteAddr();
+        return remoteAddr;
     }
 
     @Scheduled(fixedRate = 300_000)

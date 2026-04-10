@@ -1,5 +1,7 @@
 package com.veyra.vehicle.car.manager;
 
+import com.veyra.core.constants.ErrorCodes;
+import com.veyra.core.exception.ResourceNotFoundException;
 import com.veyra.core.response.PageResponse;
 import com.veyra.vehicle.car.dto.request.CreateCarRequest;
 import com.veyra.vehicle.car.dto.request.UpdateCarRequest;
@@ -62,13 +64,16 @@ public class CarManager implements CarService {
     @Override
     @Transactional(readOnly = true)
     public CarResponse getById(Long id) {
-        return carMapper.toResponse(carRules.getByIdOrThrow(id));
+        var car = carRepository.findByIdWithModelAndBrand(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorCodes.CAR_NOT_FOUND, "Araç bulunamadı: " + id));
+        return carMapper.toResponse(car);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CarResponse> getAll() {
-        return carRepository.findAll()
+        return carRepository.findAllWithModelAndBrand()
                 .stream()
                 .map(carMapper::toResponse)
                 .toList();
@@ -77,13 +82,14 @@ public class CarManager implements CarService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<CarResponse> getAll(Pageable pageable) {
-        return new PageResponse<>(carRepository.findAll(pageable).map(carMapper::toResponse));
+        return new PageResponse<>(carRepository.findAllWithModelAndBrand(pageable)
+                .map(carMapper::toResponse));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CarResponse> getAvailable() {
-        return carRepository.findAllByStatus(CarStatus.AVAILABLE)
+        return carRepository.findAllByStatusWithModelAndBrand(CarStatus.AVAILABLE)
                 .stream()
                 .map(carMapper::toResponse)
                 .toList();
@@ -92,7 +98,7 @@ public class CarManager implements CarService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<CarResponse> getAvailable(Pageable pageable) {
-        return new PageResponse<>(carRepository.findAllByStatus(CarStatus.AVAILABLE, pageable)
+        return new PageResponse<>(carRepository.findAllByStatusWithModelAndBrand(CarStatus.AVAILABLE, pageable)
                 .map(carMapper::toResponse));
     }
 

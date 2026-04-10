@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,7 +18,10 @@ import org.hibernate.annotations.SQLRestriction;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "payments")
+@Table(name = "payments", indexes = {
+        @Index(name = "idx_payment_rental", columnList = "rentalId, deleted"),
+        @Index(name = "idx_payment_user", columnList = "userId, deleted")
+})
 @SQLRestriction("deleted = false")
 @Getter
 @Setter

@@ -3,20 +3,28 @@ spring:
     name: veyra-api
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/veyra_db}
-    username: ${SPRING_DATASOURCE_USERNAME:veyra_user}
-    password: ${SPRING_DATASOURCE_PASSWORD:veyra_pass}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 10000
+      idle-timeout: 300000
+      max-lifetime: 600000
 
   jpa:
     hibernate:
-      ddl-auto: update        # İlk geliştirmede 'update', production'da 'validate' olacak
+      ddl-auto: ${DDL_AUTO:update}
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
     open-in-view: false
+
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
 
 jwt:
   # JWT_SECRET env var zorunludur — fallback yoktur.
@@ -44,9 +52,14 @@ management:
 
 server:
   port: 8080
+  shutdown: graceful
+  tomcat:
+    max-http-form-post-size: 1MB
+    max-swallow-size: 1MB
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS}
 
 admin:
-  email: ${ADMIN_EMAIL:admin@veyra.com}
-  # ADMIN_PASSWORD env var zorunludur — fallback yoktur.
-  # Uygulama bu değer set edilmeden başlatılmamalıdır.
+  email: ${ADMIN_EMAIL}
   password: ${ADMIN_PASSWORD}
