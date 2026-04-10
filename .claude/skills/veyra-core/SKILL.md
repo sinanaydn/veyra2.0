@@ -70,6 +70,8 @@ Her exception `errorCode` ve `message` alır. `GlobalExceptionHandler` HTTP stat
 | `ForbiddenException` | 403 | |
 | `BusinessRuleException` | 422 | İş kuralı ihlali |
 | `MethodArgumentNotValidException` | 400 | Field hatalarını `Map<String,String>`'e çevirir |
+| `ConstraintViolationException` | 400 | Query param validation hataları |
+| `HttpMessageNotReadableException` | 400 | Bozuk JSON — internal bilgi sızdırmaz |
 | `AccessDeniedException` | 403 | Spring Security |
 | `Exception` | 500 | Generic mesaj döner, stack trace log'lanır |
 
@@ -79,20 +81,21 @@ Controller ve Manager'da **try-catch yok** — tüm hatalar buraya gelir.
 String sabitler. Frontend bu kodları kullanarak çok dilli mesaj gösterebilir.
 
 Kategoriler:
-- **Auth:** `INVALID_CREDENTIALS`, `TOKEN_EXPIRED`, `TOKEN_INVALID`, `ACCESS_DENIED`
+- **Auth:** `INVALID_CREDENTIALS`, `TOKEN_EXPIRED`, `TOKEN_INVALID`, `ACCESS_DENIED`, `AUTH_USER_NOT_FOUND`, `ROLE_ALREADY_ASSIGNED`
 - **User:** `USER_NOT_FOUND`, `EMAIL_ALREADY_EXISTS`
 - **Brand:** `BRAND_NOT_FOUND`, `BRAND_ALREADY_EXISTS`
 - **CarModel:** `CAR_MODEL_NOT_FOUND`, `CAR_MODEL_ALREADY_EXISTS`
 - **Car:** `CAR_NOT_FOUND`, `CAR_NOT_AVAILABLE`
 - **Rental:** `RENTAL_NOT_FOUND`, `RENTAL_ALREADY_ACTIVE`, `RENTAL_NOT_ACTIVE`, `RENTAL_DATE_INVALID`
 - **Payment:** `PAYMENT_NOT_FOUND`, `PAYMENT_ALREADY_DONE`
+- **Rate Limit:** `RATE_LIMIT_EXCEEDED`
 - **Genel:** `VALIDATION_ERROR`, `INTERNAL_ERROR`
 
 ## ApiConstants
 Tüm API path öneklerini merkezi tutar:
 ```java
 API_V1 = "/api/v1"
-AUTH, USERS, BRANDS, CAR_MODELS, CARS, RENTALS, PAYMENTS
+AUTH, USERS, BRANDS, CAR_MODELS, CARS, RENTALS, PAYMENTS, ADMIN
 ```
 
 ## SecurityUtils

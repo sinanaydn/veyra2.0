@@ -12,7 +12,8 @@
       "Bash(curl:*)",
       "Bash(taskkill:*)",
       "Bash(mkdir -p /c/Veyra-RentACar/.vscode)",
-      "Bash(cp /c/Veyra-RentACar/veyra-api/.vscode/launch.json /c/Veyra-RentACar/.vscode/launch.json)"
+      "Bash(cp /c/Veyra-RentACar/veyra-api/.vscode/launch.json /c/Veyra-RentACar/.vscode/launch.json)",
+      "Bash(xargs -I {} basename {})"
     ]
   }
 }

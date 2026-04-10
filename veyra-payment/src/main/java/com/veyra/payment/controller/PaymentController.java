@@ -23,8 +23,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @RestController
 @RequestMapping(ApiConstants.PAYMENTS)
 @RequiredArgsConstructor
@@ -55,8 +53,11 @@ public class PaymentController {
 
     @GetMapping("/my")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<ApiResponse<List<PaymentResponse>>> getMyPayments(Authentication authentication) {
-        return ResponseEntity.ok(ApiResponse.success(paymentService.getMyPayments(authentication.getName())));
+    public ResponseEntity<ApiResponse<PageResponse<PaymentResponse>>> getMyPayments(
+            Authentication authentication,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.success(
+                paymentService.getMyPayments(authentication.getName(), pageable)));
     }
 
     @GetMapping

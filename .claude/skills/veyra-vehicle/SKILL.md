@@ -126,5 +126,25 @@ modelId, modelName, brandId, brandName, year, doors, baggages, dailyPrice, statu
 ```
 MapStruct `model.brand.name → brandName` gibi nested mapping yapar.
 
+## N+1 Query Çözümü — JOIN FETCH
+`CarRepository` tüm liste ve detay sorgularında `JOIN FETCH c.model m JOIN FETCH m.brand` kullanır.
+20 araçlık listede 21 query yerine tek query çalışır.
+
+| Repository Metot | Kullanım |
+|------------------|---------|
+| `findAllWithModelAndBrand()` | `getAll()` liste |
+| `findAllWithModelAndBrand(Pageable)` | `getAll(pageable)` paginated |
+| `findAllByStatusWithModelAndBrand(status)` | `getAvailable()` |
+| `findAllByStatusWithModelAndBrand(status, pageable)` | `getAvailable(pageable)` |
+| `findByIdWithModelAndBrand(id)` | `getById(id)` |
+
+## Caching
+- `BrandManager.getAll()` → `@Cacheable("brands")`
+- `CarModelManager.getAll()` → `@Cacheable("models")`
+- Create/update/delete → `@CacheEvict(allEntries = true)`
+
+## DB Index'leri
+- `cars`: `idx_car_status_deleted(status, deleted)`, `idx_car_model(model_id, deleted)`
+
 ## Bağımlılıklar
 - `veyra-core`

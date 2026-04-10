@@ -107,4 +107,12 @@ public class PaymentManager implements PaymentService {
                 .map(paymentMapper::toResponse)
                 .toList();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<PaymentResponse> getMyPayments(String email, Pageable pageable) {
+        Long userId = userRules.getUserIdByEmail(email);
+        return new PageResponse<>(paymentRepository.findAllByUserId(userId, pageable)
+                .map(paymentMapper::toResponse));
+    }
 }

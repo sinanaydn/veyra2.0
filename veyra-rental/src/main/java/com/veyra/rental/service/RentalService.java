@@ -26,4 +26,6 @@ public interface RentalService {
     PageResponse<RentalResponse> getAllByUserId(Long userId, Pageable pageable);
 
     List<RentalResponse> getMyRentals(String email);
+
+    PageResponse<RentalResponse> getMyRentals(String email, Pageable pageable);
 }

@@ -10,6 +10,8 @@ import com.veyra.vehicle.model.repository.CarModelRepository;
 import com.veyra.vehicle.model.rules.CarModelRules;
 import com.veyra.vehicle.model.service.CarModelService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,7 @@ public class CarModelManager implements CarModelService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "models", allEntries = true)
     public CarModelResponse create(CreateCarModelRequest request) {
         var brand = brandRules.getByIdOrThrow(request.getBrandId());
         carModelRules.checkIfModelNameExistsForBrand(request.getName(), request.getBrandId());
@@ -40,6 +43,7 @@ public class CarModelManager implements CarModelService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "models", allEntries = true)
     public CarModelResponse update(Long id, UpdateCarModelRequest request) {
         var carModel = carModelRules.getByIdOrThrow(id);
         var brand = brandRules.getByIdOrThrow(request.getBrandId());
@@ -59,6 +63,7 @@ public class CarModelManager implements CarModelService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable("models")
     public List<CarModelResponse> getAll() {
         return carModelRepository.findAll()
                 .stream()
@@ -78,6 +83,7 @@ public class CarModelManager implements CarModelService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "models", allEntries = true)
     public void delete(Long id) {
         var carModel = carModelRules.getByIdOrThrow(id);
         carModel.setDeleted(true);

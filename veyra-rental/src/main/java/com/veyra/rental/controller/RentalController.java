@@ -23,8 +23,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @Slf4j
 @RestController
 @RequestMapping(ApiConstants.RENTALS)
@@ -74,8 +72,11 @@ public class RentalController {
 
     @GetMapping("/my")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<ApiResponse<List<RentalResponse>>> getMyRentals(Authentication authentication) {
-        return ResponseEntity.ok(ApiResponse.success(rentalService.getMyRentals(authentication.getName())));
+    public ResponseEntity<ApiResponse<PageResponse<RentalResponse>>> getMyRentals(
+            Authentication authentication,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.success(
+                rentalService.getMyRentals(authentication.getName(), pageable)));
     }
 
     @GetMapping

@@ -1,6 +1,9 @@
 spring:
   application:
     name: veyra-api
+  threads:
+    virtual:
+      enabled: true
 
   datasource:
     url: ${SPRING_DATASOURCE_URL}
@@ -23,6 +26,11 @@ spring:
         format_sql: true
     open-in-view: false
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
+
   lifecycle:
     timeout-per-shutdown-phase: 30s
 
@@ -36,10 +44,12 @@ jwt:
 springdoc:
   api-docs:
     path: /v3/api-docs
+    enabled: ${SWAGGER_ENABLED:true}
   swagger-ui:
     path: /swagger-ui.html
     tags-sorter: alpha
     operations-sorter: alpha
+    enabled: ${SWAGGER_ENABLED:true}
 
 management:
   endpoints:
@@ -53,6 +63,10 @@ management:
 server:
   port: 8080
   shutdown: graceful
+  compression:
+    enabled: true
+    min-response-size: 1024
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
   tomcat:
     max-http-form-post-size: 1MB
     max-swallow-size: 1MB

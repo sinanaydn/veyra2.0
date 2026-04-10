@@ -42,7 +42,8 @@ DB tabanlı, revoke edilebilir. `refresh_tokens` tablosuna yazılır.
 | `authUserId` | AuthUser'a soft reference |
 | `expiresAt` | 7 gün |
 
-**Token rotation:** Her `/auth/refresh` isteğinde eski token silinir, yeni üretilir.
+**Token rotation:** Her `/auth/refresh` isteğinde önce yeni token oluşturulur, sonra eski silinir (create-first-delete-after — atomic güvenlik).
+**Scheduled cleanup:** `RefreshTokenCleanupTask` her 6 saatte expired token'ları temizler.
 **Global logout:** `/auth/logout` o kullanıcının tüm refresh token'larını siler.
 **Login:** Yeni login önceki tüm token'ları temizler (global logout tutarlılığı).
 
@@ -50,7 +51,7 @@ DB tabanlı, revoke edilebilir. `refresh_tokens` tablosuna yazılır.
 
 - **Stateless** — `SessionCreationPolicy.STATELESS`
 - **CSRF disabled** (JWT için doğru)
-- **CORS** — `localhost:3000`, `localhost:5173` allowed
+- **CORS** — `CORS_ALLOWED_ORIGINS` env var'dan okunur (default: `localhost:3000,5173`)
 - `@EnableMethodSecurity` — `@PreAuthorize` aktif
 - `JwtAuthenticationFilter` `UsernamePasswordAuthenticationFilter`'dan önce
 
@@ -64,7 +65,11 @@ DB tabanlı, revoke edilebilir. `refresh_tokens` tablosuna yazılır.
 /actuator/health
 ```
 
-Diğer her şey authenticated olmalı.
+Özel yetki kuralları:
+- `DELETE /**` → `hasRole('ADMIN')`
+- `/api/v1/admin/**` → `hasRole('ADMIN')`
+- `/api/v1/users/**` → `hasRole('ADMIN')`
+- Diğer her şey authenticated olmalı.
 
 ## JwtAuthenticationFilter
 Her request için:
@@ -93,10 +98,10 @@ Her request için:
 | POST | `/api/v1/auth/logout` | Public | `RefreshRequest` | Kullanıcının tüm refresh token'larını sil |
 
 ### RegisterRequest
-- `firstName`, `lastName` — `@NotBlank`
-- `email` — `@NotBlank` `@Email`
-- `password` — `@NotBlank` `@Size(min=8)`
-- `phone` — opsiyonel
+- `firstName`, `lastName` — `@NotBlank` `@Size(max=50)`
+- `email` — `@NotBlank` `@Email` `@Size(max=255)`
+- `password` — `@NotBlank` `@Size(min=10, max=128)` `@Pattern(büyük+küçük+rakam+özel karakter)`
+- `phone` — opsiyonel `@Size(max=15)` `@Pattern(telefon formatı)`
 
 Akışı:
 1. `userRules.checkIfEmailAlreadyExists(email)` → 409 olabilir
@@ -106,7 +111,8 @@ Akışı:
 5. JWT üret ve dön
 
 ### LoginRequest
-- `email`, `password` — `@NotBlank`
+- `email` — `@NotBlank` `@Email` `@Size(max=255)`
+- `password` — `@NotBlank` `@Size(max=128)`
 
 Akışı:
 1. `AuthUser`'ı email ile bul (yoksa `INVALID_CREDENTIALS`)
@@ -133,8 +139,10 @@ Akışı:
 |-------|---------|
 | `getByEmailOrThrow(email)` | AuthUser döndürür, yoksa `UnauthorizedException` (`INVALID_CREDENTIALS`) |
 | `getByIdOrThrow(id)` | AuthUser döndürür, yoksa `UnauthorizedException` (`TOKEN_INVALID`) |
+| `getByUserIdOrThrow(userId)` | AuthUser döndürür, yoksa `ResourceNotFoundException` (`AUTH_USER_NOT_FOUND`) |
 | `getRefreshTokenOrThrow(token)` | RefreshToken döndürür, yoksa `UnauthorizedException` |
 | `checkIfEmailAlreadyRegistered(email)` | Varsa `AlreadyExistsException` |
+| `checkIfRoleAlreadyAssigned(authUser, role)` | Zaten aynı roldeyse `BusinessRuleException` (`ROLE_ALREADY_ASSIGNED`) |
 
 `AuthManager` artık doğrudan repository çağrısı yapmaz — tüm entity fetch'ler `AuthRules` üzerinden yapılır.
 
@@ -143,6 +151,23 @@ Akışı:
 - AuthUser'ı email ile bulur → `deleted = true`
 - `refreshTokenService.revokeAllByAuthUserId()` ile tüm token'ları iptal eder
 - Kullanıcı silme işlemi transactional olarak `veyra-user` → event → `veyra-auth` zincirinde çalışır
+
+## AdminController — Role Management
+`/api/v1/admin/**` path'i altında, sadece ADMIN erişimli.
+
+| Method | Path | Auth | Açıklama |
+|--------|------|------|---------|
+| PUT | `/api/v1/admin/users/{userId}/role` | **ADMIN** | Kullanıcı rolü değiştir |
+
+### ChangeRoleRequest
+- `role` — `@NotNull` (`ADMIN` veya `USER`)
+
+Akışı: `AuthRules.getByUserIdOrThrow(userId)` → `checkIfRoleAlreadyAssigned` → `setRole` → save.
+
+## RateLimitFilter
+- `/login` ve `/register` endpoint'lerine uygulanır — IP başına 5 istek/dakika
+- **X-Forwarded-For güvenliği:** Sadece trusted proxy'lerden (localhost) gelen XFF header'ına güvenilir, client doğrudan bağlanırsa `remoteAddr` kullanılır
+- Her 5 dakikada stale entry'ler temizlenir (`@Scheduled`)
 
 ## Bağımlılıklar
 - `veyra-core` — `ApiResponse`, exceptions, `UserDeletedEvent`

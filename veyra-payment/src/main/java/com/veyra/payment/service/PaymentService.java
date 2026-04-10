@@ -22,4 +22,6 @@ public interface PaymentService {
     PageResponse<PaymentResponse> getAllByUserId(Long userId, Pageable pageable);
 
     List<PaymentResponse> getMyPayments(String email);
+
+    PageResponse<PaymentResponse> getMyPayments(String email, Pageable pageable);
 }

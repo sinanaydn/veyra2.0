@@ -144,4 +144,12 @@ public class RentalManager implements RentalService {
                 .map(rentalMapper::toResponse)
                 .toList();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<RentalResponse> getMyRentals(String email, Pageable pageable) {
+        Long userId = userRules.getUserIdByEmail(email);
+        return new PageResponse<>(rentalRepository.findAllByUserId(userId, pageable)
+                .map(rentalMapper::toResponse));
+    }
 }

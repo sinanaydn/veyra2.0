@@ -87,10 +87,10 @@ Eş zamanlı ikinci istek bu lock'u bekler; ilk commit'ten sonra `checkIfCarAvai
 3. response döndür
 ```
 
-### getMyRentals(email)
+### getMyRentals(email) / getMyRentals(email, pageable)
 ```
 1. userId = userRules.getUserIdByEmail(email)
-2. findAllByUserId(userId) → response listesi
+2. findAllByUserId(userId) → response listesi (paginated veya tam)
 ```
 
 `Authentication.getName()` JWT'den email'i verir.
@@ -103,7 +103,7 @@ Eş zamanlı ikinci istek bu lock'u bekler; ilk commit'ten sonra `checkIfCarAvai
 | POST | `/api/v1/rentals/{id}/complete` | **ADMIN** | İade |
 | POST | `/api/v1/rentals/{id}/cancel` | USER+ADMIN | İptal — USER yalnızca kendi kiraladığını iptal edebilir |
 | GET | `/api/v1/rentals/{id}` | USER+ADMIN | Tek kayıt — USER yalnızca kendine ait görebilir |
-| GET | `/api/v1/rentals/my` | USER+ADMIN | Kendi kiralamaları |
+| GET | `/api/v1/rentals/my` | USER+ADMIN | Kendi kiralamaları (pageable: `?page=0&size=20`) |
 | GET | `/api/v1/rentals?userId=X` | **ADMIN** | Tüm/filtreli liste (pageable: `?page=0&size=20`) |
 
 ### CreateRentalRequest
@@ -117,6 +117,10 @@ Eş zamanlı ikinci istek bu lock'u bekler; ilk commit'ten sonra `checkIfCarAvai
 - Controller: `Authentication authentication` inject → `SecurityUtils.isAdmin(authentication)` ile rol kontrolü
 - Service: `(id, email, isAdmin)` imzası
 - Manager: `SecurityUtils.checkOwnership(entityUserId, email, isAdmin, userRules::getUserIdByEmail)` — merkezi ownership kontrolü
+
+## DB Index'leri
+- `idx_rental_car_status(carId, status, deleted)` — aktif kiralama kontrolü
+- `idx_rental_user_status(userId, status, deleted)` — kullanıcı bazlı listeleme
 
 ## Bağımlılıklar
 - `veyra-core` — SecurityUtils, ForbiddenException, ErrorCodes

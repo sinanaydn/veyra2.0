@@ -64,10 +64,10 @@ Kiralamalara ait ödemeleri kaydeder. Gerçek bir ödeme gateway'i çağrısı *
 2. SecurityUtils.checkOwnership(payment.userId, email, isAdmin, userRules::getUserIdByEmail)
 ```
 
-### getMyPayments(email)
+### getMyPayments(email) / getMyPayments(email, pageable)
 ```
 1. userId = userRules.getUserIdByEmail(email)
-2. findAllByUserId(userId)
+2. findAllByUserId(userId) → response listesi (paginated veya tam)
 ```
 
 ## Endpoint'ler
@@ -76,7 +76,7 @@ Kiralamalara ait ödemeleri kaydeder. Gerçek bir ödeme gateway'i çağrısı *
 |--------|------|------|---------|
 | POST | `/api/v1/payments` | USER+ADMIN | Ödeme oluştur — USER kendi kirasını öder, ADMIN hepsini |
 | GET | `/api/v1/payments/{id}` | USER+ADMIN | Tek kayıt — USER yalnızca kendine ait görebilir |
-| GET | `/api/v1/payments/my` | USER+ADMIN | Kendi ödemeler |
+| GET | `/api/v1/payments/my` | USER+ADMIN | Kendi ödemeler (pageable: `?page=0&size=20`) |
 | GET | `/api/v1/payments?userId=X` | **ADMIN** | Tüm/filtreli liste (pageable: `?page=0&size=20`) |
 
 ### CreatePaymentRequest
@@ -88,6 +88,13 @@ Sadece bu alan. Tutar ve userId backend'de hesaplanır.
 - Controller: `SecurityUtils.isAdmin(authentication)` ile rol kontrolü
 - Service: `(request, email, isAdmin)` imzası
 - Manager: `SecurityUtils.checkOwnership(entityUserId, email, isAdmin, userRules::getUserIdByEmail)` — merkezi ownership kontrolü
+
+## Idempotency
+`POST /api/v1/payments` header'ında `X-Idempotency-Key` gönderilebilir. Aynı key ile yapılan ikinci istek mevcut kaydı döndürür, yeni ödeme oluşturmaz.
+
+## DB Index'leri
+- `idx_payment_rental(rentalId, deleted)` — rental bazlı ödeme kontrolü
+- `idx_payment_user(userId, deleted)` — kullanıcı bazlı listeleme
 
 ## Bağımlılıklar
 - `veyra-core` — SecurityUtils, ForbiddenException, ErrorCodes

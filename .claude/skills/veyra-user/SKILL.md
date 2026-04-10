@@ -54,9 +54,9 @@ Bu sayede silinen kullanıcı sisteme tekrar giriş yapamaz.
 | DELETE | `/api/v1/users/{id}` | ADMIN | Soft delete + AuthUser cascade |
 
 ### UpdateUserRequest
-- `firstName` `@NotBlank`
-- `lastName` `@NotBlank`
-- `phone` — opsiyonel
+- `firstName` — `@NotBlank` `@Size(max=50)`
+- `lastName` — `@NotBlank` `@Size(max=50)`
+- `phone` — opsiyonel `@Size(max=15)` `@Pattern(telefon formatı)`
 
 **Email güncellemesi yapılmaz** — AuthUser ile sync sorunu olur.
 

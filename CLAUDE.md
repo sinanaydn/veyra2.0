@@ -101,6 +101,7 @@ Tüm endpoint'ler `ApiResponse<T>` döndürür:
 | Path | Modül |
 |------|-------|
 | `/api/v1/auth/**` | veyra-auth |
+| `/api/v1/admin/**` | veyra-auth (AdminController) |
 | `/api/v1/users/**` | veyra-user |
 | `/api/v1/brands/**`, `/models/**`, `/cars/**` | veyra-vehicle |
 | `/api/v1/rentals/**` | veyra-rental |
@@ -114,5 +115,9 @@ Endpoint detayları ve yetki kuralları için ilgili modülün `SKILL.md` dosyas
 
 - **PostgreSQL 17** — Docker, app lokalde
 - `ddl-auto: update` (dev) / `validate` (prod)
-- **JWT** — stateless; claims: `email`, `userId`, `role`; 24 saat
+- **JWT** — stateless; claims: `email`, `userId`, `role`; access 15 dk, refresh 7 gün (DB, revoke edilebilir)
 - **AdminSeeder** — ilk başlatmada `ADMIN_EMAIL` / `ADMIN_PASSWORD` env var'larından admin oluşturur; `ADMIN_PASSWORD` zorunludur, set edilmezse startup durur
+- **Virtual Threads** — `spring.threads.virtual.enabled: true` (Java 25)
+- **Cache** — Brand/CarModel listeleri `@Cacheable`, CUD'da `@CacheEvict`
+- **Compression** — Tomcat gzip, 1KB üzeri JSON response'lar sıkıştırılır
+- **Env vars** — `CORS_ALLOWED_ORIGINS`, `DDL_AUTO`, `SWAGGER_ENABLED`, `JWT_SECRET`, `ADMIN_PASSWORD` (zorunlu)

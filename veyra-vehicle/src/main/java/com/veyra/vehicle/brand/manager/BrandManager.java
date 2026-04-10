@@ -8,6 +8,8 @@ import com.veyra.vehicle.brand.repository.BrandRepository;
 import com.veyra.vehicle.brand.rules.BrandRules;
 import com.veyra.vehicle.brand.service.BrandService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,7 @@ public class BrandManager implements BrandService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "brands", allEntries = true)
     public BrandResponse create(CreateBrandRequest request) {
         brandRules.checkIfBrandNameExists(request.getName());
         var brand = brandRepository.save(brandMapper.toEntity(request));
@@ -31,6 +34,7 @@ public class BrandManager implements BrandService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "brands", allEntries = true)
     public BrandResponse update(Long id, UpdateBrandRequest request) {
         var brand = brandRules.getByIdOrThrow(id);
         brandRules.checkIfBrandNameExistsForUpdate(request.getName(), id);
@@ -46,6 +50,7 @@ public class BrandManager implements BrandService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable("brands")
     public List<BrandResponse> getAll() {
         return brandRepository.findAll()
                 .stream()
@@ -55,6 +60,7 @@ public class BrandManager implements BrandService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "brands", allEntries = true)
     public void delete(Long id) {
         var brand = brandRules.getByIdOrThrow(id);
         brand.setDeleted(true);
