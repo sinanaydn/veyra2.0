@@ -1,5 +1,6 @@
 package com.veyra.auth.manager;
 
+import com.veyra.auth.dto.request.ChangeRoleRequest;
 import com.veyra.auth.dto.request.LoginRequest;
 import com.veyra.auth.dto.request.RefreshRequest;
 import com.veyra.auth.dto.request.RegisterRequest;
@@ -117,6 +118,15 @@ public class AuthManager implements AuthService {
     public void logout(RefreshRequest request) {
         // Token geçersizse sessizce geçer — idempotent logout
         refreshTokenService.revokeByToken(request.getRefreshToken());
+    }
+
+    @Override
+    @Transactional
+    public void changeRole(Long userId, ChangeRoleRequest request) {
+        var authUser = authRules.getByUserIdOrThrow(userId);
+        authRules.checkIfRoleAlreadyAssigned(authUser, request.getRole());
+        authUser.setRole(request.getRole());
+        authUserRepository.save(authUser);
     }
 
     // ------------------------------------------------------------------ //

@@ -64,6 +64,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/**").hasRole("ADMIN")
+                        .requestMatchers(ApiConstants.ADMIN + "/**").hasRole("ADMIN")
                         .requestMatchers(ApiConstants.USERS + "/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )

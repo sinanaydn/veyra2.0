@@ -41,6 +41,10 @@ public final class ErrorCodes {
     public static final String PAYMENT_NOT_FOUND     = "PAYMENT_NOT_FOUND";
     public static final String PAYMENT_ALREADY_DONE  = "PAYMENT_ALREADY_DONE";
 
+    // Auth User
+    public static final String AUTH_USER_NOT_FOUND  = "AUTH_USER_NOT_FOUND";
+    public static final String ROLE_ALREADY_ASSIGNED = "ROLE_ALREADY_ASSIGNED";
+
     // Rate Limit
     public static final String RATE_LIMIT_EXCEEDED   = "RATE_LIMIT_EXCEEDED";
 

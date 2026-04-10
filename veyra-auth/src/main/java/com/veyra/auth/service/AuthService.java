@@ -1,5 +1,6 @@
 package com.veyra.auth.service;
 
+import com.veyra.auth.dto.request.ChangeRoleRequest;
 import com.veyra.auth.dto.request.LoginRequest;
 import com.veyra.auth.dto.request.RefreshRequest;
 import com.veyra.auth.dto.request.RegisterRequest;
@@ -17,4 +18,6 @@ public interface AuthService {
     AuthResponse refresh(RefreshRequest request);
 
     void logout(RefreshRequest request);
+
+    void changeRole(Long userId, ChangeRoleRequest request);
 }

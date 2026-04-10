@@ -5,7 +5,10 @@ import com.veyra.auth.token.RefreshTokenRepository;
 import com.veyra.auth.user.entity.AuthUser;
 import com.veyra.auth.user.repository.AuthUserRepository;
 import com.veyra.core.constants.ErrorCodes;
+import com.veyra.auth.role.Role;
 import com.veyra.core.exception.AlreadyExistsException;
+import com.veyra.core.exception.BusinessRuleException;
+import com.veyra.core.exception.ResourceNotFoundException;
 import com.veyra.core.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -46,5 +49,20 @@ public class AuthRules {
         return authUserRepository.findById(id)
                 .orElseThrow(() -> new UnauthorizedException(
                         ErrorCodes.TOKEN_INVALID, "Refresh token'a ait kullanıcı bulunamadı"));
+    }
+
+    public AuthUser getByUserIdOrThrow(Long userId) {
+        return authUserRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        ErrorCodes.AUTH_USER_NOT_FOUND,
+                        "Kullanıcıya ait kimlik kaydı bulunamadı: " + userId));
+    }
+
+    public void checkIfRoleAlreadyAssigned(AuthUser authUser, Role role) {
+        if (authUser.getRole() == role) {
+            throw new BusinessRuleException(
+                    ErrorCodes.ROLE_ALREADY_ASSIGNED,
+                    "Kullanıcı zaten " + role.name() + " rolüne sahip");
+        }
     }
 }
