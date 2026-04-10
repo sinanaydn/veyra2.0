@@ -3,7 +3,16 @@
     "allow": [
       "Bash(mvn clean:*)",
       "Bash(mvn test:*)",
-      "Bash(mvn install:*)"
+      "Bash(mvn install:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(openssl rand:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(netstat -ano)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)",
+      "Bash(mkdir -p /c/Veyra-RentACar/.vscode)",
+      "Bash(cp /c/Veyra-RentACar/veyra-api/.vscode/launch.json /c/Veyra-RentACar/.vscode/launch.json)"
     ]
   }
 }

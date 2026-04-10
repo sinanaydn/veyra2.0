@@ -2,10 +2,12 @@ services:
   postgres:
     image: postgres:17
     container_name: veyra-postgres
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: veyra_db
-      POSTGRES_USER: veyra_user
-      POSTGRES_PASSWORD: veyra_pass
+      POSTGRES_DB: ${POSTGRES_DB:?DB name required}
+      POSTGRES_USER: ${POSTGRES_USER:?DB user required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?DB password required}
     ports:
       - "5432:5432"
     volumes:
@@ -24,11 +26,10 @@ services:
         condition: service_healthy
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/veyra_db
-      SPRING_DATASOURCE_USERNAME: veyra_user
-      SPRING_DATASOURCE_PASSWORD: veyra_pass
-      JWT_SECRET: veyra-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm
 
 volumes:
   postgres_data:
