@@ -48,6 +48,11 @@ public final class ErrorCodes {
     // Rate Limit
     public static final String RATE_LIMIT_EXCEEDED   = "RATE_LIMIT_EXCEEDED";
 
+    // Storage (object storage — MinIO/R2/S3)
+    public static final String FILE_UPLOAD_FAILED    = "FILE_UPLOAD_FAILED";
+    public static final String FILE_DELETE_FAILED    = "FILE_DELETE_FAILED";
+    public static final String STORAGE_UNAVAILABLE   = "STORAGE_UNAVAILABLE";
+
     // Genel
     public static final String VALIDATION_ERROR      = "VALIDATION_ERROR";
     public static final String INTERNAL_ERROR        = "INTERNAL_ERROR";
