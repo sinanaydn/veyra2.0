@@ -67,9 +67,16 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                        // Kısıtlayıcılar önce — defense in depth
                         .requestMatchers(HttpMethod.DELETE, "/**").hasRole("ADMIN")
                         .requestMatchers(ApiConstants.ADMIN + "/**").hasRole("ADMIN")
                         .requestMatchers(ApiConstants.USERS + "/**").hasRole("ADMIN")
+                        // Public catalog browse — giriş yapmadan listeleme/detay/görseller
+                        // GET dışındaki metodlar (POST/PUT/DELETE) kontroller'daki @PreAuthorize ve
+                        // yukarıdaki DELETE matcher ile ADMIN'e kısıtlı kalır.
+                        .requestMatchers(HttpMethod.GET, ApiConstants.CARS + "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, ApiConstants.BRANDS + "/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, ApiConstants.CAR_MODELS + "/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())

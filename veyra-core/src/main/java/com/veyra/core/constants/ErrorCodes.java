@@ -53,6 +53,16 @@ public final class ErrorCodes {
     public static final String FILE_DELETE_FAILED    = "FILE_DELETE_FAILED";
     public static final String STORAGE_UNAVAILABLE   = "STORAGE_UNAVAILABLE";
 
+    // File validation (client-side — 422)
+    public static final String FILE_EMPTY            = "FILE_EMPTY";
+    public static final String FILE_TYPE_INVALID     = "FILE_TYPE_INVALID";
+    public static final String FILE_SIZE_EXCEEDED    = "FILE_SIZE_EXCEEDED";
+
+    // Car Image
+    public static final String CAR_IMAGE_NOT_FOUND       = "CAR_IMAGE_NOT_FOUND";
+    public static final String CAR_IMAGE_LIMIT_EXCEEDED  = "CAR_IMAGE_LIMIT_EXCEEDED";
+    public static final String IMAGE_NOT_OWNED_BY_CAR    = "IMAGE_NOT_OWNED_BY_CAR";
+
     // Genel
     public static final String VALIDATION_ERROR      = "VALIDATION_ERROR";
     public static final String INTERNAL_ERROR        = "INTERNAL_ERROR";
