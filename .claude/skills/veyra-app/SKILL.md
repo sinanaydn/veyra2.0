@@ -106,6 +106,21 @@ cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
 ```
 
+### Storage (S3-compatible — MinIO dev / Cloudflare R2 prod)
+```yaml
+storage:
+  s3:
+    endpoint: ${STORAGE_S3_ENDPOINT}           # MinIO: http://localhost:9000, R2: https://<acc>.r2.cloudflarestorage.com
+    region: ${STORAGE_S3_REGION:us-east-1}
+    bucket: ${STORAGE_S3_BUCKET:veyra-car-images}
+    access-key: ${STORAGE_S3_ACCESS_KEY}
+    secret-key: ${STORAGE_S3_SECRET_KEY}
+    public-base-url: ${STORAGE_S3_PUBLIC_BASE_URL}    # CDN/public base URL — runtime'da URL türetmek için
+    path-style: ${STORAGE_S3_PATH_STYLE:true}          # MinIO zorunlu, R2 opsiyonel
+    auto-create-bucket: ${STORAGE_S3_AUTO_CREATE_BUCKET:true}  # Dev için startup'ta bucket oluşturur
+```
+`veyra-core`'daki `StorageProperties` bu bloğu `@ConfigurationProperties` ile bind eder. `S3StorageConfig` bucket bootstrap'i `ApplicationReadyEvent` üzerinde yapar.
+
 ## pom.xml
 - Parent: `veyra-api` (multi-module root)
 - Tüm modüller dependency olarak listelenir
@@ -116,8 +131,11 @@ cors:
 
 ## Docker
 - `Dockerfile` — multi-stage build, `eclipse-temurin:25-jre`
-- `docker-compose.yml` — PostgreSQL + app, `env_file: .env` ile secret yönetimi
+- `docker-compose.yml` — PostgreSQL + **MinIO** + app, `env_file: .env` ile secret yönetimi
+  - `minio` service: ports `9000` (S3 API) + `9001` (console), `minio_data` volume, healthcheck
+  - `veyra-app` hem `postgres` hem `minio` health'ına bağımlı (`depends_on.condition: service_healthy`)
 - `.env.example` — tüm env var'ların şablonu
+- **Dev başlatma:** `docker-compose up -d postgres minio` → MinIO console `http://localhost:9001`
 
 ## Bağımlılıklar
 - **Tüm modüller** — core, auth, user, vehicle, rental, payment

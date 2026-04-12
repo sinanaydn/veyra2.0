@@ -37,7 +37,10 @@ Cross-module kullanılan yardımcı sınıf — `veyra-rental` ve `veyra-payment
 | `findByEmail(String)` | `getUserIdByEmail` kullanır |
 
 ## User Silme Cascade (Event-Driven)
-`UserManager.delete()` kullanıcıyı soft-delete yaptıktan sonra `UserDeletedEvent(userId, email)` publish eder.
+`UserManager`'da hem `delete(id)` (admin) hem `deleteByEmail(email)` (self) ortak bir `doDelete(User)` private helper'ına delege eder:
+1. User soft-delete
+2. `UserDeletedEvent(userId, email)` publish
+
 `veyra-auth` modülündeki `UserDeletedEventListener` bu event'i dinler ve:
 1. AuthUser'ı email ile bulur → soft delete
 2. Tüm refresh token'ları revoke eder
@@ -52,6 +55,9 @@ Bu sayede silinen kullanıcı sisteme tekrar giriş yapamaz.
 | GET | `/api/v1/users/{id}` | ADMIN | Tek kayıt |
 | PUT | `/api/v1/users/{id}` | ADMIN | Profil güncelle (firstName, lastName, phone) |
 | DELETE | `/api/v1/users/{id}` | ADMIN | Soft delete + AuthUser cascade |
+| **DELETE** | **`/api/v1/users/me`** | **Authenticated** | **Kullanıcının kendi hesabını silmesi. JWT'den email alınır (id spoofing yok), aynı cascade akışı (AuthUser + token revoke) çalışır.** |
+
+`SecurityConfig`'te `DELETE /users/me` matcher'ı `DELETE /**` = ADMIN kuralından **önce** yazılmıştır — ilk eşleşen kazanır.
 
 ### UpdateUserRequest
 - `firstName` — `@NotBlank` `@Size(max=50)`
@@ -60,7 +66,11 @@ Bu sayede silinen kullanıcı sisteme tekrar giriş yapamaz.
 
 **Email güncellemesi yapılmaz** — AuthUser ile sync sorunu olur.
 
-**Tüm endpoint'ler ADMIN-only.** Register `veyra-auth`'tan yapılır.
+**`/me` dışındaki endpoint'ler ADMIN-only.** Register `veyra-auth`'tan yapılır.
+
+### Bilinen Eksikler (PROGRESS.md)
+- Son admin koruması — admin kendi hesabını `/me` üzerinden silebiliyor
+- Aktif kiralama kontrolü — aktif rental'ı olan kullanıcı silinirse orphan rental riski var
 
 ## Bağımlılıklar
 - `veyra-core`

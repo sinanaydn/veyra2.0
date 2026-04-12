@@ -24,5 +24,5 @@ public class CarImageResponse {
     private String contentType;
     private long sizeBytes;
     private int displayOrder;
-    private boolean isPrimary;
+    private boolean primary;
 }

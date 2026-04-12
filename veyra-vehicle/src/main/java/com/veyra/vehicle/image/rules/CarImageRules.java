@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -86,7 +87,7 @@ public class CarImageRules {
      */
     public void checkContentType(MultipartFile file) {
         String declaredType = file.getContentType();
-        if (declaredType == null || !ALLOWED_CONTENT_TYPES.contains(declaredType.toLowerCase())) {
+        if (declaredType == null || !ALLOWED_CONTENT_TYPES.contains(declaredType.toLowerCase(Locale.ROOT))) {
             throw new BusinessRuleException(
                     ErrorCodes.FILE_TYPE_INVALID,
                     "Desteklenmeyen dosya tipi. İzin verilen: JPEG, PNG, WebP");
@@ -121,11 +122,13 @@ public class CarImageRules {
      */
     private boolean hasValidImageMagicBytes(MultipartFile file) {
         try {
-            byte[] header = new byte[12];
+            byte[] header;
             try (var in = file.getInputStream()) {
-                int read = in.read(header);
-                if (read < 12) return false;
+                // readNBytes: stream segmentli olsa bile tam 12 byte okumayı garanti eder.
+                // InputStream.read(byte[]) kısa okuma yapabilir; readNBytes bloklayarak bekler.
+                header = in.readNBytes(12);
             }
+            if (header.length < 12) return false;
 
             // JPEG
             if ((header[0] & 0xFF) == 0xFF
@@ -147,12 +150,10 @@ public class CarImageRules {
             }
 
             // WebP: "RIFF" + 4 byte size + "WEBP"
-            if (header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F'
-                    && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P') {
-                return true;
-            }
-
-            return false;
+            return (header[0] & 0xFF) == 'R' && (header[1] & 0xFF) == 'I'
+                    && (header[2] & 0xFF) == 'F' && (header[3] & 0xFF) == 'F'
+                    && (header[8] & 0xFF) == 'W' && (header[9] & 0xFF) == 'E'
+                    && (header[10] & 0xFF) == 'B' && (header[11] & 0xFF) == 'P';
         } catch (IOException e) {
             return false;
         }

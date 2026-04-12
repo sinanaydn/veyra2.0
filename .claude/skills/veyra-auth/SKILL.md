@@ -65,11 +65,17 @@ DB tabanlı, revoke edilebilir. `refresh_tokens` tablosuna yazılır.
 /actuator/health
 ```
 
-Özel yetki kuralları:
-- `DELETE /**` → `hasRole('ADMIN')`
-- `/api/v1/admin/**` → `hasRole('ADMIN')`
-- `/api/v1/users/**` → `hasRole('ADMIN')`
-- Diğer her şey authenticated olmalı.
+Özel yetki kuralları (sıralı — Spring Security ilk eşleşen kazanır, **dar olan önce**):
+1. `DELETE /api/v1/users/me` → `authenticated` — kullanıcının kendi hesabını silmesi (id spoofing yok, JWT'den email alınır)
+2. `DELETE /**` → `hasRole('ADMIN')` — defense in depth güvenlik ağı
+3. `/api/v1/admin/**` → `hasRole('ADMIN')`
+4. `/api/v1/users/**` → `hasRole('ADMIN')`
+5. `GET /api/v1/cars/**` → `permitAll` — public catalog browse
+6. `GET /api/v1/brands/**` → `permitAll`
+7. `GET /api/v1/models/**` → `permitAll`
+8. Diğer her şey `authenticated` olmalı.
+
+Public catalog GET'leri rate-limit altındadır (aşağıya `RateLimitFilter` bölümüne bakın). Yazma operasyonları (POST/PUT/DELETE) `@PreAuthorize` + admin matcher kombinasyonuyla ADMIN'e kısıtlıdır.
 
 ## JwtAuthenticationFilter
 Her request için:
@@ -165,9 +171,33 @@ Akışı:
 Akışı: `AuthRules.getByUserIdOrThrow(userId)` → `checkIfRoleAlreadyAssigned` → `setRole` → save.
 
 ## RateLimitFilter
-- `/login` ve `/register` endpoint'lerine uygulanır — IP başına 5 istek/dakika
-- **X-Forwarded-For güvenliği:** Sadece trusted proxy'lerden (localhost) gelen XFF header'ına güvenilir, client doğrudan bağlanırsa `remoteAddr` kullanılır
-- Her 5 dakikada stale entry'ler temizlenir (`@Scheduled`)
+
+Sliding-window rate limiting — **iki bucket sistemi**. Authenticated endpoint'lere rate limit uygulanmaz (JWT zaten kimlik doğruluyor; gerektiğinde token revoke edilerek kullanıcı engellenir).
+
+| Bucket | Kapsam | Limit | Amaç |
+|--------|--------|-------|------|
+| `AUTH`   | `/api/v1/auth/**` (login/register/refresh — tüm metodlar) | 5 req / 60 sn | Brute-force koruması |
+| `PUBLIC` | GET `/api/v1/cars/**`, `/brands/**`, `/models/**`          | 60 req / 60 sn | Public catalog için DDoS/scraping koruması |
+| `NONE`   | Diğer her şey (authenticated endpoint'ler)                  | Limit yok | `shouldNotFilter` true döner, filter atlanır |
+
+**Key format:** `{ip}:{bucket}` — aynı IP iki bucket'ta ayrı sayılır. Bir kullanıcının `/auth` bucket'ını doldurması catalog browse'unu etkilemez.
+
+**429 response:** JSON body — `{"success":false,"status":429,"errorCode":"RATE_LIMIT_EXCEEDED","message":"Çok fazla istek gönderildi..."}`
+
+**X-Forwarded-For güvenliği:** Sadece `TRUSTED_PROXIES` listesindeki IP'lerden (127.0.0.1, ::1) gelen XFF header'ı parse edilir. **Rightmost-untrusted** algoritması — güvenilmez listedeki en sağdaki IP gerçek client IP kabul edilir, spoofing önlenir.
+
+**Cleanup:** `@Scheduled(fixedRate = 300_000)` — her 5 dakikada boş deque'leri siler (heap sızıntısı önleme).
+
+### Bucket çözümü (`resolveBucket`)
+```java
+if (path.startsWith("/api/v1/auth/"))           return Bucket.AUTH;
+if ("GET".equalsIgnoreCase(method)) {
+    if (path.startsWith("/api/v1/cars")
+        || path.startsWith("/api/v1/brands")
+        || path.startsWith("/api/v1/models"))   return Bucket.PUBLIC;
+}
+return Bucket.NONE;
+```
 
 ## Bağımlılıklar
 - `veyra-core` — `ApiResponse`, exceptions, `UserDeletedEvent`

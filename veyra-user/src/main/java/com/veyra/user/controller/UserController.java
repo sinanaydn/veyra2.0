@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -48,6 +49,17 @@ public class UserController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         userService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Kullanıcının kendi hesabını silmesi.
+     * JWT'den email alınır — id spoofing mümkün değil. UserDeletedEvent cascade'i tetiklenir:
+     * AuthUser soft-delete edilir ve tüm refresh token'lar revoke edilir.
+     */
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> deleteSelf(Authentication authentication) {
+        userService.deleteByEmail(authentication.getName());
         return ResponseEntity.noContent().build();
     }
 }

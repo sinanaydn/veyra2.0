@@ -28,4 +28,10 @@ public interface UserService {
     PageResponse<UserResponse> getAll(Pageable pageable);
 
     void delete(Long id);
+
+    /**
+     * Kullanıcının kendi hesabını silmesi için — JWT'den email alınır, id spoofing mümkün değil.
+     * {@code delete(Long)} ile aynı cascade akışını (soft delete + UserDeletedEvent) tetikler.
+     */
+    void deleteByEmail(String email);
 }

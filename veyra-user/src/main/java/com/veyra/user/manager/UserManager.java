@@ -2,6 +2,7 @@ package com.veyra.user.manager;
 
 import com.veyra.core.event.UserDeletedEvent;
 import com.veyra.core.response.PageResponse;
+import com.veyra.user.entity.User;
 import com.veyra.user.dto.request.CreateUserRequest;
 import com.veyra.user.dto.request.UpdateUserRequest;
 import com.veyra.user.dto.response.UserResponse;
@@ -74,7 +75,20 @@ public class UserManager implements UserService {
     @Override
     @Transactional
     public void delete(Long id) {
-        var user = userRules.getByIdOrThrow(id);
+        doDelete(userRules.getByIdOrThrow(id));
+    }
+
+    @Override
+    @Transactional
+    public void deleteByEmail(String email) {
+        doDelete(userRules.getByEmailOrThrow(email));
+    }
+
+    /**
+     * Ortak soft-delete akışı — hem admin tarafından id ile silme hem de kullanıcının
+     * kendi hesabını silmesi aynı cascade'i (AuthUser soft-delete + token revoke) tetikler.
+     */
+    private void doDelete(User user) {
         user.setDeleted(true);
         userRepository.save(user);
         eventPublisher.publishEvent(new UserDeletedEvent(user.getId(), user.getEmail()));

@@ -24,7 +24,7 @@ import org.hibernate.annotations.SQLRestriction;
  *    response üretilirken StorageService ile türetilir. Vendor/CDN değişimine dayanıklı.
  *  - {@code storageKey} unique — storage tarafındaki bir obje birden fazla kayda bağlanamaz.
  *  - {@code displayOrder} kullanıcıya gösterim sırası.
- *  - {@code isPrimary} kapak görseli — her araç için en fazla bir tane olmalı (DB değil, service katmanında enforce).
+ *  - {@code primary} kapak görseli — her araç için en fazla bir tane olmalı (DB değil, service katmanında enforce).
  *  - Soft delete — {@code @SQLRestriction} ile tüm query'ler otomatik filtreler.
  */
 @Entity
@@ -59,5 +59,5 @@ public class CarImage extends BaseEntity {
 
     @Column(name = "is_primary", nullable = false)
     @Builder.Default
-    private boolean isPrimary = false;
+    private boolean primary = false;
 }

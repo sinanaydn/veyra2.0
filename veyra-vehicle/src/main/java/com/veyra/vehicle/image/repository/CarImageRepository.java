@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,7 +30,7 @@ public interface CarImageRepository extends JpaRepository<CarImage, Long> {
      * Bir araçtaki kapak görselini getirir (en fazla 1 tane olmalı).
      * Yeni kapak atanırken eskisinin kapak bayrağını kaldırmak için kullanılır.
      */
-    Optional<CarImage> findFirstByCarIdAndIsPrimaryTrue(Long carId);
+    Optional<CarImage> findFirstByCarIdAndPrimaryTrue(Long carId);
 
     /**
      * Bir araçta kaç görsel varsa en yüksek displayOrder'ı döner.
@@ -44,4 +45,18 @@ public interface CarImageRepository extends JpaRepository<CarImage, Long> {
      * Başka bir aracın görselini silmeye çalışan istekleri erken durdurur.
      */
     Optional<CarImage> findByIdAndCarId(Long id, Long carId);
+
+    /**
+     * Liste endpoint'leri için batch fetch — N+1 önleme.
+     * N araç için tek query ile tüm görselleri çeker.
+     * Önce car_id'ye, sonra displayOrder'a göre sıralıdır — manager Map.grouping'e doğrudan döker.
+     *
+     * {@code ci.car.id} FK kolonu olduğu için Hibernate lazy proxy üzerinden sorgu atmaz.
+     */
+    @Query("""
+            SELECT ci FROM CarImage ci
+            WHERE ci.car.id IN :carIds
+            ORDER BY ci.car.id ASC, ci.displayOrder ASC
+            """)
+    List<CarImage> findAllByCarIdIn(@Param("carIds") Collection<Long> carIds);
 }

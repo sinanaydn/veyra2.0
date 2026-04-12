@@ -12,5 +12,7 @@ public interface CarMapper {
     @Mapping(source = "model.name",      target = "modelName")
     @Mapping(source = "model.brand.id",  target = "brandId")
     @Mapping(source = "model.brand.name",target = "brandName")
+    @Mapping(target = "images",          ignore = true)
+    @Mapping(target = "primaryImageUrl", ignore = true)
     CarResponse toResponse(Car car);
 }

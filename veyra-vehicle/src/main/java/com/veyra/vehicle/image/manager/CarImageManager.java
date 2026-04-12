@@ -73,7 +73,7 @@ public class CarImageManager implements CarImageService {
                 .contentType(stored.contentType())
                 .sizeBytes(stored.sizeBytes())
                 .displayOrder(nextOrder)
-                .isPrimary(makePrimary)
+                .primary(makePrimary)
                 .build();
 
         CarImage saved = carImageRepository.save(image);
@@ -151,7 +151,7 @@ public class CarImageManager implements CarImageService {
         }
 
         // Eski primary'yi kaldır (varsa)
-        carImageRepository.findFirstByCarIdAndIsPrimaryTrue(carId).ifPresent(old -> {
+        carImageRepository.findFirstByCarIdAndPrimaryTrue(carId).ifPresent(old -> {
             old.setPrimary(false);
             carImageRepository.save(old);
         });

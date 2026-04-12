@@ -13,8 +13,12 @@ import java.util.List;
  * CarImage → CarImageResponse dönüşümü.
  *
  * Abstract class — interface değil — çünkü {@link StorageService}'i inject edip
- * {@code url} alanını çalışma zamanında türetmemiz gerekiyor. MapStruct interface'lerde
- * alan injection desteklemediği için bu pattern standart kabul edilir.
+ * {@code url} alanını çalışma zamanında türetmemiz gerekiyor.
+ *
+ * Setter injection kullanılıyor: MapStruct abstract class constructor'larını
+ * generated impl'e otomatik propagate etmez, bu yüzden constructor injection bu
+ * pattern'de çalışmaz. Setter injection MapStruct + Spring + abstract class üçlüsü
+ * için resmi önerilen pattern'dir ve IntelliJ'in field injection uyarısını tetiklemez.
  *
  * {@code url} hiçbir zaman DB'de tutulmaz; her response build'inde
  * storageKey'den taze üretilir. CDN/vendor/format değişimi DB'ye yansımaz.
@@ -22,8 +26,12 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public abstract class CarImageMapper {
 
-    @Autowired
     protected StorageService storageService;
+
+    @Autowired
+    public void setStorageService(StorageService storageService) {
+        this.storageService = storageService;
+    }
 
     @Mapping(source = "car.id", target = "carId")
     @Mapping(target = "url",

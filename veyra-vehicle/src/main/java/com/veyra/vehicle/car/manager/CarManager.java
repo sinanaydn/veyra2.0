@@ -12,22 +12,31 @@ import com.veyra.vehicle.car.mapper.CarMapper;
 import com.veyra.vehicle.car.repository.CarRepository;
 import com.veyra.vehicle.car.rules.CarRules;
 import com.veyra.vehicle.car.service.CarService;
+import com.veyra.vehicle.image.dto.response.CarImageResponse;
+import com.veyra.vehicle.image.entity.CarImage;
+import com.veyra.vehicle.image.mapper.CarImageMapper;
+import com.veyra.vehicle.image.repository.CarImageRepository;
 import com.veyra.vehicle.model.rules.CarModelRules;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class CarManager implements CarService {
 
-    private final CarRepository  carRepository;
-    private final CarRules       carRules;
-    private final CarModelRules  carModelRules;
-    private final CarMapper      carMapper;
+    private final CarRepository       carRepository;
+    private final CarRules            carRules;
+    private final CarModelRules       carModelRules;
+    private final CarMapper           carMapper;
+    private final CarImageRepository  carImageRepository;
+    private final CarImageMapper      carImageMapper;
 
     @Override
     @Transactional
@@ -42,7 +51,10 @@ public class CarManager implements CarService {
                 .dailyPrice(request.getDailyPrice())
                 .build();
 
-        return carMapper.toResponse(carRepository.save(car));
+        CarResponse response = carMapper.toResponse(carRepository.save(car));
+        // Yeni araç — henüz görsel yok
+        response.setImages(Collections.emptyList());
+        return response;
     }
 
     @Override
@@ -58,7 +70,9 @@ public class CarManager implements CarService {
         car.setDailyPrice(request.getDailyPrice());
         car.setStatus(request.getStatus());
 
-        return carMapper.toResponse(carRepository.save(car));
+        CarResponse response = carMapper.toResponse(carRepository.save(car));
+        enrichWithImages(response);
+        return response;
     }
 
     @Override
@@ -67,39 +81,48 @@ public class CarManager implements CarService {
         var car = carRepository.findByIdWithModelAndBrand(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         ErrorCodes.CAR_NOT_FOUND, "Araç bulunamadı: " + id));
-        return carMapper.toResponse(car);
+        CarResponse response = carMapper.toResponse(car);
+        enrichWithImages(response);
+        return response;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CarResponse> getAll() {
-        return carRepository.findAllWithModelAndBrand()
+        List<CarResponse> responses = carRepository.findAllWithModelAndBrand()
                 .stream()
                 .map(carMapper::toResponse)
                 .toList();
+        enrichListWithImages(responses);
+        return responses;
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageResponse<CarResponse> getAll(Pageable pageable) {
-        return new PageResponse<>(carRepository.findAllWithModelAndBrand(pageable)
-                .map(carMapper::toResponse));
+        var page = carRepository.findAllWithModelAndBrand(pageable).map(carMapper::toResponse);
+        enrichListWithImages(page.getContent());
+        return new PageResponse<>(page);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<CarResponse> getAvailable() {
-        return carRepository.findAllByStatusWithModelAndBrand(CarStatus.AVAILABLE)
+        List<CarResponse> responses = carRepository.findAllByStatusWithModelAndBrand(CarStatus.AVAILABLE)
                 .stream()
                 .map(carMapper::toResponse)
                 .toList();
+        enrichListWithImages(responses);
+        return responses;
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageResponse<CarResponse> getAvailable(Pageable pageable) {
-        return new PageResponse<>(carRepository.findAllByStatusWithModelAndBrand(CarStatus.AVAILABLE, pageable)
-                .map(carMapper::toResponse));
+        var page = carRepository.findAllByStatusWithModelAndBrand(CarStatus.AVAILABLE, pageable)
+                .map(carMapper::toResponse);
+        enrichListWithImages(page.getContent());
+        return new PageResponse<>(page);
     }
 
     @Override
@@ -125,5 +148,58 @@ public class CarManager implements CarService {
         var car = carRules.getByIdOrThrow(carId);
         car.setStatus(CarStatus.AVAILABLE);
         carRepository.save(car);
+    }
+
+    // ------------------------------------------------------------------ //
+    //  Image enrichment helpers                                           //
+    // ------------------------------------------------------------------ //
+
+    /**
+     * Tek araç için — getById / update sonrası.
+     * 1 ekstra query ile görselleri yükler, displayOrder'a göre sıralıdır.
+     */
+    private void enrichWithImages(CarResponse response) {
+        List<CarImage> images = carImageRepository.findByCarIdOrderByDisplayOrderAsc(response.getId());
+        List<CarImageResponse> imageResponses = carImageMapper.toResponseList(images);
+        response.setImages(imageResponses);
+        response.setPrimaryImageUrl(findPrimaryUrl(imageResponses));
+    }
+
+    /**
+     * Çoklu araç için batch fetch — getAll / getAvailable / pagination.
+     * N araç için toplam 1 query çalışır (N+1 önlenir).
+     *
+     * Boş liste → hiçbir query atma.
+     */
+    private void enrichListWithImages(List<CarResponse> responses) {
+        if (responses == null || responses.isEmpty()) {
+            return;
+        }
+
+        List<Long> carIds = responses.stream().map(CarResponse::getId).toList();
+        List<CarImage> allImages = carImageRepository.findAllByCarIdIn(carIds);
+
+        // car.id FK kolonudur — lazy proxy üzerinden ek query atılmaz
+        Map<Long, List<CarImage>> imagesByCarId = allImages.stream()
+                .collect(Collectors.groupingBy(img -> img.getCar().getId()));
+
+        for (CarResponse response : responses) {
+            List<CarImage> carImages = imagesByCarId.getOrDefault(response.getId(), Collections.emptyList());
+            List<CarImageResponse> imageResponses = carImageMapper.toResponseList(carImages);
+            response.setImages(imageResponses);
+            response.setPrimaryImageUrl(findPrimaryUrl(imageResponses));
+        }
+    }
+
+    /**
+     * Liste içindeki kapak görselinin URL'ini döner — yoksa null.
+     * CarImageMapper URL'i zaten StorageService üzerinden türetmiş oluyor.
+     */
+    private String findPrimaryUrl(List<CarImageResponse> images) {
+        return images.stream()
+                .filter(CarImageResponse::isPrimary)
+                .map(CarImageResponse::getUrl)
+                .findFirst()
+                .orElse(null);
     }
 }

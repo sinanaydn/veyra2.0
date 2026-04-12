@@ -67,6 +67,9 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                        // Kullanıcının kendi hesabını silmesi — DELETE /** kuralından önce gelmeli,
+                        // aksi halde ADMIN rolü gerekirdi. JWT'den email alınır, id spoofing mümkün değil.
+                        .requestMatchers(HttpMethod.DELETE, ApiConstants.USERS + "/me").authenticated()
                         // Kısıtlayıcılar önce — defense in depth
                         .requestMatchers(HttpMethod.DELETE, "/**").hasRole("ADMIN")
                         .requestMatchers(ApiConstants.ADMIN + "/**").hasRole("ADMIN")

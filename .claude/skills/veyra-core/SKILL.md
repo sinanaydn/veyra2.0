@@ -98,6 +98,39 @@ API_V1 = "/api/v1"
 AUTH, USERS, BRANDS, CAR_MODELS, CARS, RENTALS, PAYMENTS, ADMIN
 ```
 
+## Storage Abstraction (S3-compatible)
+
+`com.veyra.core.storage` paketi — dev'de MinIO, prod'da Cloudflare R2 (her ikisi de S3 API uyumlu). Tek implementasyon, sadece env var'lar değişir.
+
+### StorageService interface
+| Metot | Davranış |
+|-------|---------|
+| `upload(MultipartFile, folder)` | `{folder}/{uuid}.{ext}` key üretir, S3'e yazar, `StoredFile` döner |
+| `delete(storageKey)` | İdempotent — obje yoksa hata vermez |
+| `getPublicUrl(storageKey)` | `{publicBaseUrl}/{storageKey}` — CDN/vendor değişse bile DB etkilenmez |
+
+### StoredFile record
+```java
+public record StoredFile(String storageKey, String contentType, long sizeBytes) {}
+```
+**URL YOK** — bilinçli karar. Public URL formatı vendor/CDN değişiminde bozulabilir, signed URL'e geçiş mümkün olmalı. Bu yüzden DB'de sadece `storageKey` saklanır, URL çağrı anında türetilir.
+
+### StorageProperties
+`@ConfigurationProperties("storage.s3")` record. 8 alan: `endpoint`, `region`, `bucket`, `accessKey`, `secretKey`, `publicBaseUrl`, `pathStyle`, `autoCreateBucket`.
+
+### S3StorageConfig
+- `S3Client` bean — `pathStyleAccess=true`, `forcePathStyle=true` (MinIO için zorunlu)
+- `@EventListener(ApplicationReadyEvent.class) bootstrapBucket()` — `autoCreateBucket=true` ise startup'ta bucket yoksa oluşturur (dev/docker için)
+
+### StorageException
+`BusinessException` subclass'ı — HTTP 500. Upload/delete hatalarında kullanılır, S3 kütüphanesi exception'ları sarar.
+
+### Path traversal koruması
+`S3StorageService.buildStorageKey()` — orijinal filename kullanmaz. UUID + regex-sanitized extension (`[a-z0-9]{1,10}`). Böylece `../../etc/passwd` gibi saldırılar mümkün değil.
+
+### Bağımlılık
+`software.amazon.awssdk:s3` (AWS SDK v2, `veyra-api/pom.xml`'de BOM ile versiyon yönetilir).
+
 ## SecurityUtils
 `com.veyra.core.util.SecurityUtils` — controller ve manager'larda kullanılan yardımcı metotlar.
 

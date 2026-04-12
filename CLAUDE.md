@@ -11,11 +11,12 @@ Tüm Maven komutları `veyra-api/` dizininden çalıştırılır.
 ```bash
 mvn clean install -DskipTests           # Tüm projeyi build et
 mvn -pl veyra-app spring-boot:run       # Uygulamayı lokalde çalıştır
-docker-compose up -d                    # PostgreSQL'i Docker'da başlat
+docker-compose up -d                    # PostgreSQL + MinIO'yu Docker'da başlat
 ```
 
 - Server: `http://localhost:8080`
 - Swagger: `http://localhost:8080/swagger-ui/index.html`
+- MinIO console: `http://localhost:9001` (dev object storage)
 
 ---
 
@@ -36,10 +37,10 @@ docker-compose up -d                    # PostgreSQL'i Docker'da başlat
 veyra-app     → tüm modüller
 veyra-payment → veyra-core, veyra-rental, veyra-vehicle, veyra-user
 veyra-rental  → veyra-core, veyra-vehicle, veyra-user
-veyra-vehicle → veyra-core
+veyra-vehicle → veyra-core                 (StorageService + AWS SDK v2 buradan gelir)
 veyra-user    → veyra-core
 veyra-auth    → veyra-core, veyra-user
-veyra-core    → (hiçbir şey)
+veyra-core    → AWS SDK v2 (software.amazon.awssdk:s3)
 ```
 
 ---
@@ -104,6 +105,7 @@ Tüm endpoint'ler `ApiResponse<T>` döndürür:
 | `/api/v1/admin/**` | veyra-auth (AdminController) |
 | `/api/v1/users/**` | veyra-user |
 | `/api/v1/brands/**`, `/models/**`, `/cars/**` | veyra-vehicle |
+| `/api/v1/cars/{carId}/images/**` | veyra-vehicle (image sub-domain) |
 | `/api/v1/rentals/**` | veyra-rental |
 | `/api/v1/payments/**` | veyra-payment |
 
@@ -120,4 +122,25 @@ Endpoint detayları ve yetki kuralları için ilgili modülün `SKILL.md` dosyas
 - **Virtual Threads** — `spring.threads.virtual.enabled: true` (Java 25)
 - **Cache** — Brand/CarModel listeleri `@Cacheable`, CUD'da `@CacheEvict`
 - **Compression** — Tomcat gzip, 1KB üzeri JSON response'lar sıkıştırılır
-- **Env vars** — `CORS_ALLOWED_ORIGINS`, `DDL_AUTO`, `SWAGGER_ENABLED`, `JWT_SECRET`, `ADMIN_PASSWORD` (zorunlu)
+- **Object Storage** — S3-compatible abstraction (`veyra-core.StorageService`), dev'de **MinIO** (Docker), prod'da **Cloudflare R2**. DB'de sadece `storageKey` saklanır, public URL runtime'da türetilir (vendor lock-in yok).
+- **Env vars** — `CORS_ALLOWED_ORIGINS`, `DDL_AUTO`, `SWAGGER_ENABLED`, `JWT_SECRET`, `ADMIN_PASSWORD` (zorunlu), `STORAGE_S3_*` (endpoint, region, bucket, access-key, secret-key, public-base-url, path-style, auto-create-bucket)
+
+---
+
+## Public Catalog & Rate Limiting
+
+**Public (authentication YOK):**
+- `GET /api/v1/cars/**` (araç detay + listeleme + görseller)
+- `GET /api/v1/brands/**`
+- `GET /api/v1/models/**`
+
+Rent-a-car ziyaretçileri giriş yapmadan katalogu gezebilir. Yazma operasyonları (POST/PUT/DELETE) `@PreAuthorize` + SecurityConfig matcher ile **ADMIN**'e kısıtlıdır.
+
+**RateLimitFilter (veyra-auth) — iki bucket:**
+| Bucket | Kapsam | Limit |
+|--------|--------|-------|
+| `AUTH`   | `/api/v1/auth/**` (login/register/refresh) | 5 req / 60 sn |
+| `PUBLIC` | GET `/cars\|/brands\|/models/**`          | 60 req / 60 sn |
+| `NONE`   | Authenticated endpoint'ler                  | Limit YOK (JWT zaten kimlik doğruluyor) |
+
+Key format: `{ip}:{bucket}` — aynı IP iki bucket'ta ayrı sayılır, biri dolsa diğer etkilenmez. `X-Forwarded-For` sadece `TRUSTED_PROXIES` listesindeki IP'lerden gelirse parse edilir (spoof koruması, rightmost-untrusted algoritması).
