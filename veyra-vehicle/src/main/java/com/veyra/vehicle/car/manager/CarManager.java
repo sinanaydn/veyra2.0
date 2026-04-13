@@ -3,6 +3,7 @@ package com.veyra.vehicle.car.manager;
 import com.veyra.core.constants.ErrorCodes;
 import com.veyra.core.exception.ResourceNotFoundException;
 import com.veyra.core.response.PageResponse;
+import com.veyra.vehicle.car.dto.request.CarFilterRequest;
 import com.veyra.vehicle.car.dto.request.CreateCarRequest;
 import com.veyra.vehicle.car.dto.request.UpdateCarRequest;
 import com.veyra.vehicle.car.dto.response.CarResponse;
@@ -16,9 +17,11 @@ import com.veyra.vehicle.image.dto.response.CarImageResponse;
 import com.veyra.vehicle.image.entity.CarImage;
 import com.veyra.vehicle.image.mapper.CarImageMapper;
 import com.veyra.vehicle.image.repository.CarImageRepository;
+import com.veyra.vehicle.car.specification.CarSpecification;
 import com.veyra.vehicle.model.rules.CarModelRules;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +52,12 @@ public class CarManager implements CarService {
                 .doors(request.getDoors())
                 .baggages(request.getBaggages())
                 .dailyPrice(request.getDailyPrice())
+                .fuelType(request.getFuelType())
+                .transmission(request.getTransmission())
+                .seats(request.getSeats())
+                .color(request.getColor())
+                .mileage(request.getMileage())
+                .description(request.getDescription())
                 .build();
 
         CarResponse response = carMapper.toResponse(carRepository.save(car));
@@ -68,6 +77,12 @@ public class CarManager implements CarService {
         car.setDoors(request.getDoors());
         car.setBaggages(request.getBaggages());
         car.setDailyPrice(request.getDailyPrice());
+        car.setFuelType(request.getFuelType());
+        car.setTransmission(request.getTransmission());
+        car.setSeats(request.getSeats());
+        car.setColor(request.getColor());
+        car.setMileage(request.getMileage());
+        car.setDescription(request.getDescription());
         car.setStatus(request.getStatus());
 
         CarResponse response = carMapper.toResponse(carRepository.save(car));
@@ -121,6 +136,15 @@ public class CarManager implements CarService {
     public PageResponse<CarResponse> getAvailable(Pageable pageable) {
         var page = carRepository.findAllByStatusWithModelAndBrand(CarStatus.AVAILABLE, pageable)
                 .map(carMapper::toResponse);
+        enrichListWithImages(page.getContent());
+        return new PageResponse<>(page);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<CarResponse> search(CarFilterRequest filter, Pageable pageable) {
+        Specification<Car> spec = CarSpecification.withFilters(filter);
+        var page = carRepository.findAll(spec, pageable).map(carMapper::toResponse);
         enrichListWithImages(page.getContent());
         return new PageResponse<>(page);
     }

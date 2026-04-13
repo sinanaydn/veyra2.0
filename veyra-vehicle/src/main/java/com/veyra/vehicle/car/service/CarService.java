@@ -1,6 +1,7 @@
 package com.veyra.vehicle.car.service;
 
 import com.veyra.core.response.PageResponse;
+import com.veyra.vehicle.car.dto.request.CarFilterRequest;
 import com.veyra.vehicle.car.dto.request.CreateCarRequest;
 import com.veyra.vehicle.car.dto.request.UpdateCarRequest;
 import com.veyra.vehicle.car.dto.response.CarResponse;
@@ -23,6 +24,8 @@ public interface CarService {
     List<CarResponse> getAvailable();
 
     PageResponse<CarResponse> getAvailable(Pageable pageable);
+
+    PageResponse<CarResponse> search(CarFilterRequest filter, Pageable pageable);
 
     void delete(Long id);
 

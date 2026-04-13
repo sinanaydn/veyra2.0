@@ -2,6 +2,8 @@ package com.veyra.vehicle.car.entity;
 
 import com.veyra.core.entity.BaseEntity;
 import com.veyra.vehicle.car.enums.CarStatus;
+import com.veyra.vehicle.car.enums.FuelType;
+import com.veyra.vehicle.car.enums.TransmissionType;
 import com.veyra.vehicle.model.entity.CarModel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -24,7 +26,8 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "cars", indexes = {
         @Index(name = "idx_car_status_deleted", columnList = "status, deleted"),
-        @Index(name = "idx_car_model", columnList = "model_id, deleted")
+        @Index(name = "idx_car_model", columnList = "model_id, deleted"),
+        @Index(name = "idx_car_fuel_trans", columnList = "fuel_type, transmission, deleted")
 })
 @SQLRestriction("deleted = false")
 @Getter
@@ -49,6 +52,26 @@ public class Car extends BaseEntity {
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal dailyPrice;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private FuelType fuelType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TransmissionType transmission;
+
+    @Column(nullable = false)
+    private int seats;
+
+    @Column(nullable = false, length = 50)
+    private String color;
+
+    @Column(nullable = false)
+    private int mileage;
+
+    @Column(length = 1000)
+    private String description;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -1,6 +1,8 @@
 package com.veyra.vehicle.car.dto.response;
 
 import com.veyra.vehicle.car.enums.CarStatus;
+import com.veyra.vehicle.car.enums.FuelType;
+import com.veyra.vehicle.car.enums.TransmissionType;
 import com.veyra.vehicle.image.dto.response.CarImageResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,6 +35,12 @@ public class CarResponse {
     private int doors;
     private int baggages;
     private BigDecimal dailyPrice;
+    private FuelType fuelType;
+    private TransmissionType transmission;
+    private int seats;
+    private String color;
+    private int mileage;
+    private String description;
     private CarStatus status;
     private LocalDateTime createdAt;
 

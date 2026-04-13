@@ -5,7 +5,10 @@ import com.veyra.vehicle.car.enums.CarStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,7 +16,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
-public interface CarRepository extends JpaRepository<Car, Long> {
+public interface CarRepository extends JpaRepository<Car, Long>, JpaSpecificationExecutor<Car> {
 
     @Query("SELECT c FROM Car c JOIN FETCH c.model m JOIN FETCH m.brand")
     List<Car> findAllWithModelAndBrand();
@@ -33,6 +36,10 @@ public interface CarRepository extends JpaRepository<Car, Long> {
     Optional<Car> findByIdWithModelAndBrand(@Param("id") Long id);
 
     List<Car> findAllByModelId(Long modelId);
+
+    @Override
+    @EntityGraph(attributePaths = {"model", "model.brand"})
+    Page<Car> findAll(Specification<Car> spec, Pageable pageable);
 
     /**
      * Araç satırını SELECT ... FOR UPDATE ile kilitler.
