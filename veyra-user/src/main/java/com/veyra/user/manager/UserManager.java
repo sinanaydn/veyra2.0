@@ -16,8 +16,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
 @Service
 @RequiredArgsConstructor
 public class UserManager implements UserService {
@@ -55,15 +53,6 @@ public class UserManager implements UserService {
     @Transactional(readOnly = true)
     public UserResponse getByEmail(String email) {
         return userMapper.toResponse(userRules.getByEmailOrThrow(email));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<UserResponse> getAll() {
-        return userRepository.findAll()
-                .stream()
-                .map(userMapper::toResponse)
-                .toList();
     }
 
     @Override

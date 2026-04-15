@@ -14,6 +14,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.SQLRestriction;
 
+import java.time.LocalDateTime;
+
 /**
  * Kimlik doğrulama bilgilerini tutar: e-posta, şifre (hash), rol.
  *
@@ -43,4 +45,28 @@ public class AuthUser extends BaseEntity {
     // veyra-user.User tablosuna soft reference — @ManyToOne değil (modüler mimari)
     @Column(nullable = false, unique = true)
     private Long userId;
+
+    // --- Hesap kilitleme (brute-force koruması) ---
+
+    @Builder.Default
+    @Column(nullable = false)
+    private int failedLoginAttempts = 0;
+
+    private LocalDateTime lockedUntil;
+
+    public boolean isAccountLocked() {
+        return lockedUntil != null && lockedUntil.isAfter(LocalDateTime.now());
+    }
+
+    public void recordFailedLogin(int maxAttempts, long lockMinutes) {
+        failedLoginAttempts++;
+        if (failedLoginAttempts >= maxAttempts) {
+            lockedUntil = LocalDateTime.now().plusMinutes(lockMinutes);
+        }
+    }
+
+    public void resetFailedLoginAttempts() {
+        failedLoginAttempts = 0;
+        lockedUntil = null;
+    }
 }

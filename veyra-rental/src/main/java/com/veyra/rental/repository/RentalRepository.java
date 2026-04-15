@@ -10,8 +10,6 @@ import java.util.List;
 
 public interface RentalRepository extends JpaRepository<Rental, Long> {
 
-    List<Rental> findAllByUserId(Long userId);
-
     Page<Rental> findAllByUserId(Long userId, Pageable pageable);
 
     List<Rental> findAllByCarId(Long carId);

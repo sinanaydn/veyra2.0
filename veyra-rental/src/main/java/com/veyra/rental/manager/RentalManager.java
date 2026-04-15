@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -104,27 +103,8 @@ public class RentalManager implements RentalService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<RentalResponse> getAll() {
-        return rentalRepository.findAll()
-                .stream()
-                .map(rentalMapper::toResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public PageResponse<RentalResponse> getAll(Pageable pageable) {
         return new PageResponse<>(rentalRepository.findAll(pageable).map(rentalMapper::toResponse));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<RentalResponse> getAllByUserId(Long userId) {
-        userRules.checkIfUserExists(userId);
-        return rentalRepository.findAllByUserId(userId)
-                .stream()
-                .map(rentalMapper::toResponse)
-                .toList();
     }
 
     @Override
@@ -133,16 +113,6 @@ public class RentalManager implements RentalService {
         userRules.checkIfUserExists(userId);
         return new PageResponse<>(rentalRepository.findAllByUserId(userId, pageable)
                 .map(rentalMapper::toResponse));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<RentalResponse> getMyRentals(String email) {
-        Long userId = userRules.getUserIdByEmail(email);
-        return rentalRepository.findAllByUserId(userId)
-                .stream()
-                .map(rentalMapper::toResponse)
-                .toList();
     }
 
     @Override

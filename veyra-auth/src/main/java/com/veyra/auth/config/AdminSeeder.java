@@ -32,14 +32,14 @@ public class AdminSeeder implements ApplicationRunner {
     @Value("${admin.password}")
     private String adminPassword;
 
+    private static final int    MIN_PASSWORD_LENGTH = 12;
+    private static final String PASSWORD_PATTERN    =
+            "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@#$%^&+=!.,?_-]).+$";
+
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (adminPassword == null || adminPassword.isBlank()) {
-            throw new IllegalStateException(
-                    "ADMIN_PASSWORD env var set edilmemiş. " +
-                    "Uygulama güvensiz varsayılan şifre olmadan başlatılamaz.");
-        }
+        validateAdminPassword();
 
         if (authUserRepository.existsByEmail(adminEmail)) return;
 
@@ -52,5 +52,23 @@ public class AdminSeeder implements ApplicationRunner {
                 .role(Role.ADMIN)
                 .userId(userResponse.getId())
                 .build());
+    }
+
+    private void validateAdminPassword() {
+        if (adminPassword == null || adminPassword.isBlank()) {
+            throw new IllegalStateException(
+                    "ADMIN_PASSWORD env var set edilmemiş. " +
+                    "Uygulama güvensiz varsayılan şifre olmadan başlatılamaz.");
+        }
+        if (adminPassword.length() < MIN_PASSWORD_LENGTH) {
+            throw new IllegalStateException(
+                    "ADMIN_PASSWORD en az " + MIN_PASSWORD_LENGTH + " karakter olmalıdır. " +
+                    "Mevcut uzunluk: " + adminPassword.length());
+        }
+        if (!adminPassword.matches(PASSWORD_PATTERN)) {
+            throw new IllegalStateException(
+                    "ADMIN_PASSWORD en az bir küçük harf, bir büyük harf, " +
+                    "bir rakam ve bir özel karakter içermelidir.");
+        }
     }
 }

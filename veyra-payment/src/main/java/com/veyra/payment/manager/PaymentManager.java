@@ -1,5 +1,10 @@
 package com.veyra.payment.manager;
 
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.veyra.core.response.PageResponse;
 import com.veyra.core.util.SecurityUtils;
 import com.veyra.payment.dto.request.CreatePaymentRequest;
@@ -12,12 +17,8 @@ import com.veyra.payment.service.PaymentService;
 import com.veyra.rental.entity.Rental;
 import com.veyra.rental.rules.RentalRules;
 import com.veyra.user.rules.UserRules;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -52,7 +53,19 @@ public class PaymentManager implements PaymentService {
                 .idempotencyKey(idempotencyKey)
                 .build();
 
-        paymentRepository.save(payment);
+        try {
+            paymentRepository.save(payment);
+        } catch (DataIntegrityViolationException e) {
+            // Race condition: aynı idempotency key ile eş zamanlı istek geldi.
+            // UNIQUE constraint sayesinde ikinci insert reddedilir — mevcut kaydı döndür.
+            if (idempotencyKey != null) {
+                var existing = paymentRepository.findByIdempotencyKey(idempotencyKey);
+                if (existing.isPresent()) {
+                    return paymentMapper.toResponse(existing.get());
+                }
+        }
+            throw e;
+        }
 
         return paymentMapper.toResponse(payment);
     }
@@ -67,27 +80,8 @@ public class PaymentManager implements PaymentService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaymentResponse> getAll() {
-        return paymentRepository.findAll()
-                .stream()
-                .map(paymentMapper::toResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public PageResponse<PaymentResponse> getAll(Pageable pageable) {
         return new PageResponse<>(paymentRepository.findAll(pageable).map(paymentMapper::toResponse));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<PaymentResponse> getAllByUserId(Long userId) {
-        userRules.checkIfUserExists(userId);
-        return paymentRepository.findAllByUserId(userId)
-                .stream()
-                .map(paymentMapper::toResponse)
-                .toList();
     }
 
     @Override
@@ -96,16 +90,6 @@ public class PaymentManager implements PaymentService {
         userRules.checkIfUserExists(userId);
         return new PageResponse<>(paymentRepository.findAllByUserId(userId, pageable)
                 .map(paymentMapper::toResponse));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<PaymentResponse> getMyPayments(String email) {
-        Long userId = userRules.getUserIdByEmail(email);
-        return paymentRepository.findAllByUserId(userId)
-                .stream()
-                .map(paymentMapper::toResponse)
-                .toList();
     }
 
     @Override

@@ -13,8 +13,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByIdempotencyKey(String idempotencyKey);
 
-    List<Payment> findAllByUserId(Long userId);
-
     Page<Payment> findAllByUserId(Long userId, Pageable pageable);
 
     List<Payment> findAllByRentalId(Long rentalId);

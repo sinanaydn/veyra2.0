@@ -103,39 +103,8 @@ public class CarManager implements CarService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CarResponse> getAll() {
-        List<CarResponse> responses = carRepository.findAllWithModelAndBrand()
-                .stream()
-                .map(carMapper::toResponse)
-                .toList();
-        enrichListWithImages(responses);
-        return responses;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public PageResponse<CarResponse> getAll(Pageable pageable) {
         var page = carRepository.findAllWithModelAndBrand(pageable).map(carMapper::toResponse);
-        enrichListWithImages(page.getContent());
-        return new PageResponse<>(page);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CarResponse> getAvailable() {
-        List<CarResponse> responses = carRepository.findAllByStatusWithModelAndBrand(CarStatus.AVAILABLE)
-                .stream()
-                .map(carMapper::toResponse)
-                .toList();
-        enrichListWithImages(responses);
-        return responses;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public PageResponse<CarResponse> getAvailable(Pageable pageable) {
-        var page = carRepository.findAllByStatusWithModelAndBrand(CarStatus.AVAILABLE, pageable)
-                .map(carMapper::toResponse);
         enrichListWithImages(page.getContent());
         return new PageResponse<>(page);
     }

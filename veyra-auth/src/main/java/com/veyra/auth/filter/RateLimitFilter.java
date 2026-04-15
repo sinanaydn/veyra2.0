@@ -34,9 +34,10 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private static final int  AUTH_MAX   = 5;
-    private static final int  PUBLIC_MAX = 60;
-    private static final long WINDOW_MS  = 60_000;
+    private static final int  AUTH_MAX          = 5;
+    private static final int  PUBLIC_MAX        = 60;
+    private static final int  AUTHENTICATED_MAX = 120;
+    private static final long WINDOW_MS         = 60_000;
 
     // Güvenilir proxy IP'leri — sadece bunlardan gelen X-Forwarded-For'a güvenilir
     private static final Set<String> TRUSTED_PROXIES = Set.of(
@@ -45,26 +46,28 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final Map<String, Deque<Long>> requestCounts = new ConcurrentHashMap<>();
 
-    /** Hangi rate-limit kovasına düşüldüğü. NONE ise filter atlanır. */
-    private enum Bucket { AUTH, PUBLIC, NONE }
+    /** Hangi rate-limit kovasına düşüldüğü. */
+    private enum Bucket { AUTH, PUBLIC, AUTHENTICATED }
 
     // ------------------------------------------------------------------ //
     //  Filter girişi                                                      //
     // ------------------------------------------------------------------ //
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        return resolveBucket(request) == Bucket.NONE;
-    }
-
-    @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         Bucket bucket = resolveBucket(request);
-        int maxRequests = (bucket == Bucket.AUTH) ? AUTH_MAX : PUBLIC_MAX;
+        int maxRequests = switch (bucket) {
+            case AUTH          -> AUTH_MAX;
+            case PUBLIC        -> PUBLIC_MAX;
+            case AUTHENTICATED -> AUTHENTICATED_MAX;
+        };
 
         String ip  = resolveClientIp(request);
+        // Authenticated bucket için JWT'den kullanıcı bilgisi kullanılır (henüz parse edilmedi,
+        // bu filter JWT filter'dan önce çalışır). IP bazlı key yeterlidir — her kullanıcının
+        // aynı IP'den gelmesi beklenir; farklı IP'ler zaten ayrı sayılır.
         String key = ip + ":" + bucket.name();
         long now   = System.currentTimeMillis();
 
@@ -102,7 +105,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
      * Öncelik sırası:
      *  1. /api/v1/auth/** → AUTH (method fark etmez — login/register/refresh hepsi)
      *  2. GET /cars|/brands|/models/** → PUBLIC (sadece GET)
-     *  3. Diğer her şey → NONE (filter atlanır)
+     *  3. Diğer tüm API endpoint'leri → AUTHENTICATED (120 req/dk)
      */
     private Bucket resolveBucket(HttpServletRequest request) {
         String path = request.getRequestURI();
@@ -120,7 +123,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             }
         }
 
-        return Bucket.NONE;
+        return Bucket.AUTHENTICATED;
     }
 
     // ------------------------------------------------------------------ //

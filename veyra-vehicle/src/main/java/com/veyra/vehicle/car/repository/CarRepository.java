@@ -1,7 +1,6 @@
 package com.veyra.vehicle.car.repository;
 
 import com.veyra.vehicle.car.entity.Car;
-import com.veyra.vehicle.car.enums.CarStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,16 +16,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CarRepository extends JpaRepository<Car, Long>, JpaSpecificationExecutor<Car> {
-
-    @Query("SELECT c FROM Car c JOIN FETCH c.model m JOIN FETCH m.brand")
-    List<Car> findAllWithModelAndBrand();
-
-    @Query(value = "SELECT c FROM Car c JOIN FETCH c.model m JOIN FETCH m.brand WHERE c.status = :status",
-           countQuery = "SELECT COUNT(c) FROM Car c WHERE c.status = :status")
-    Page<Car> findAllByStatusWithModelAndBrand(@Param("status") CarStatus status, Pageable pageable);
-
-    @Query("SELECT c FROM Car c JOIN FETCH c.model m JOIN FETCH m.brand WHERE c.status = :status")
-    List<Car> findAllByStatusWithModelAndBrand(@Param("status") CarStatus status);
 
     @Query(value = "SELECT c FROM Car c JOIN FETCH c.model m JOIN FETCH m.brand",
            countQuery = "SELECT COUNT(c) FROM Car c")

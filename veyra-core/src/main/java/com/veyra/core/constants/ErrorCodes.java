@@ -11,6 +11,7 @@ public final class ErrorCodes {
 
     // Auth
     public static final String INVALID_CREDENTIALS  = "INVALID_CREDENTIALS";
+    public static final String ACCOUNT_LOCKED        = "ACCOUNT_LOCKED";
     public static final String TOKEN_EXPIRED         = "TOKEN_EXPIRED";
     public static final String TOKEN_INVALID         = "TOKEN_INVALID";
     public static final String ACCESS_DENIED         = "ACCESS_DENIED";
@@ -51,7 +52,6 @@ public final class ErrorCodes {
     // Storage (object storage — MinIO/R2/S3)
     public static final String FILE_UPLOAD_FAILED    = "FILE_UPLOAD_FAILED";
     public static final String FILE_DELETE_FAILED    = "FILE_DELETE_FAILED";
-    public static final String STORAGE_UNAVAILABLE   = "STORAGE_UNAVAILABLE";
 
     // File validation (client-side — 422)
     public static final String FILE_EMPTY            = "FILE_EMPTY";

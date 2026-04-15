@@ -6,8 +6,6 @@ import com.veyra.user.dto.request.UpdateUserRequest;
 import com.veyra.user.dto.response.UserResponse;
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
-
 /**
  * Kullanıcı yönetimi sözleşmesi.
  * veyra-auth modülü register sırasında create() metodunu kullanır.
@@ -22,8 +20,6 @@ public interface UserService {
     UserResponse getById(Long id);
 
     UserResponse getByEmail(String email);
-
-    List<UserResponse> getAll();
 
     PageResponse<UserResponse> getAll(Pageable pageable);
 

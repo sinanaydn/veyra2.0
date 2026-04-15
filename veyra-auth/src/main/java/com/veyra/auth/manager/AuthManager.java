@@ -13,8 +13,6 @@ import com.veyra.auth.token.RefreshToken;
 import com.veyra.auth.token.RefreshTokenService;
 import com.veyra.auth.user.entity.AuthUser;
 import com.veyra.auth.user.repository.AuthUserRepository;
-import com.veyra.core.constants.ErrorCodes;
-import com.veyra.core.exception.UnauthorizedException;
 import com.veyra.user.dto.request.CreateUserRequest;
 import com.veyra.user.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -88,10 +86,9 @@ public class AuthManager implements AuthService {
     public AuthResponse login(LoginRequest request) {
 
         AuthUser authUser = authRules.getByEmailOrThrow(request.getEmail());
-
-        if (!passwordEncoder.matches(request.getPassword(), authUser.getPasswordHash())) {
-            throw new UnauthorizedException(ErrorCodes.INVALID_CREDENTIALS, "E-posta veya şifre hatalı");
-        }
+        authRules.checkIfAccountLocked(authUser);
+        authRules.validatePasswordOrRecordFailure(authUser, request.getPassword());
+        authRules.resetFailedAttemptsIfNeeded(authUser);
 
         // Önceki oturumları temizle — global logout tutarlılığı için
         refreshTokenService.revokeAllByAuthUserId(authUser.getId());

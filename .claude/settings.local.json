@@ -14,7 +14,18 @@
       "Bash(mkdir -p /c/Veyra-RentACar/.vscode)",
       "Bash(cp /c/Veyra-RentACar/veyra-api/.vscode/launch.json /c/Veyra-RentACar/.vscode/launch.json)",
       "Bash(xargs -I {} basename {})",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(mvn compile:*)",
+      "Bash(grep -r \"//.*TODO\\\\|//.*FIXME\\\\|/\\\\*.*FIXME\\\\|/\\\\*.*TODO\" /c/Veyra-RentACar/veyra-api --include=\"*.java\")",
+      "Bash(find /c/Veyra-RentACar/veyra-api -name \"*.java\" -type f ! -path \"*/target/*\" -exec grep -l \"^[[:space:]]*//\" {} \\\\;)",
+      "Bash(grep -A2 \"public.*Response.*{\" /c/Veyra-RentACar/veyra-api/veyra-*/src/main/java/*/manager/*.java)",
+      "Bash(grep -B1 \"^--$\")",
+      "Bash(grep -n \"^[[:space:]]*//[^/]\" /c/Veyra-RentACar/veyra-api/veyra-auth/src/main/java/com/veyra/auth/manager/AuthManager.java)",
+      "Bash(find /c/Veyra-RentACar/veyra-api -path \"*/src/main/java\" -type f -name \"*.java\" -exec grep -l \"@Getter\\\\|@Setter\" {} \\\\;)",
+      "Bash(cat)",
+      "Bash(bash /tmp/analyze.sh)",
+      "Bash(grep -r \"getByIdOrThrow\" /c/Veyra-RentACar/veyra-api/veyra-*/src/main --include=\"*.java\")",
+      "Bash(bash /tmp/summary.sh)"
     ]
   }
 }

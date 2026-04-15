@@ -5,23 +5,15 @@ import com.veyra.payment.dto.request.CreatePaymentRequest;
 import com.veyra.payment.dto.response.PaymentResponse;
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
-
 public interface PaymentService {
 
     PaymentResponse pay(CreatePaymentRequest request, String email, boolean isAdmin, String idempotencyKey);
 
     PaymentResponse getById(Long id, String email, boolean isAdmin);
 
-    List<PaymentResponse> getAll();
-
     PageResponse<PaymentResponse> getAll(Pageable pageable);
 
-    List<PaymentResponse> getAllByUserId(Long userId);
-
     PageResponse<PaymentResponse> getAllByUserId(Long userId, Pageable pageable);
-
-    List<PaymentResponse> getMyPayments(String email);
 
     PageResponse<PaymentResponse> getMyPayments(String email, Pageable pageable);
 }
