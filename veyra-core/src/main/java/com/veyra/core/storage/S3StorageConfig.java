@@ -12,9 +12,11 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.net.URI;
 
@@ -52,7 +54,6 @@ public class S3StorageConfig {
                 .region(Region.of(properties.region()))
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
                 .serviceConfiguration(s3Config)
-                .forcePathStyle(properties.pathStyleAccess())
                 .build();
     }
 
@@ -82,11 +83,11 @@ public class S3StorageConfig {
             try {
                 client.createBucket(CreateBucketRequest.builder().bucket(bucket).build());
                 log.info("Storage: bucket '{}' oluşturuldu", bucket);
-            } catch (Exception createEx) {
+            } catch (S3Exception | SdkClientException createEx) {
                 log.warn("Storage: bucket '{}' oluşturulamadı — ilk upload'da hata verebilir: {}",
                         bucket, createEx.getMessage());
             }
-        } catch (Exception e) {
+        } catch (S3Exception | SdkClientException e) {
             log.warn("Storage: bucket '{}' kontrolü başarısız — endpoint erişilemiyor olabilir: {}",
                     bucket, e.getMessage());
         }

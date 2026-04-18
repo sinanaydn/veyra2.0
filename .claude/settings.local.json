@@ -25,7 +25,14 @@
       "Bash(cat)",
       "Bash(bash /tmp/analyze.sh)",
       "Bash(grep -r \"getByIdOrThrow\" /c/Veyra-RentACar/veyra-api/veyra-*/src/main --include=\"*.java\")",
-      "Bash(bash /tmp/summary.sh)"
+      "Bash(bash /tmp/summary.sh)",
+      "Bash(jar tf:*)",
+      "Bash(jar xf:*)",
+      "Bash(javap -verbose com/veyra/user/mapper/UserMapperImpl.class)",
+      "Bash(javap -p com/veyra/user/mapper/UserMapperImpl.class)",
+      "Bash(javap -verbose veyra-user/target/classes/com/veyra/user/mapper/UserMapperImpl.class)",
+      "Bash(pkill -f \"spring-boot:run\")",
+      "Bash(pkill -f \"veyra-app\")"
     ]
   }
 }
