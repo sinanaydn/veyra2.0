@@ -35,6 +35,7 @@
         <mapstruct.version>1.6.3</mapstruct.version>
         <jjwt.version>0.12.6</jjwt.version>
         <springdoc.version>2.8.6</springdoc.version>
+        <swagger.annotations.version>2.2.30</swagger.annotations.version>
         <aws.sdk.version>2.30.0</aws.sdk.version>
     </properties>
 
@@ -112,11 +113,22 @@
                 <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
                 <version>${springdoc.version}</version>
             </dependency>
+
+            <!-- Swagger annotations — tüm modüllerde OpenAPI @Operation/@Schema/@ApiResponse için -->
+            <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-annotations-jakarta</artifactId>
+                <version>${swagger.annotations.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <!-- Tüm modüllerde ortak bağımlılıklar -->
     <dependencies>
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations-jakarta</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>

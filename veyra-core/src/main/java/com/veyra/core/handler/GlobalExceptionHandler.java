@@ -2,7 +2,7 @@ package com.veyra.core.handler;
 
 import com.veyra.core.constants.ErrorCodes;
 import com.veyra.core.exception.*;
-import com.veyra.core.response.ApiResponse;
+import com.veyra.core.response.ApiResult;
 import lombok.extern.slf4j.Slf4j;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Tüm modüllerdeki exception'ları merkezi olarak yakalar ve ApiResponse formatına dönüştürür.
+ * Tüm modüllerdeki exception'ları merkezi olarak yakalar ve ApiResult formatına dönüştürür.
  * Controller'lar try-catch yazmaz — SRP.
  *
  * İşleme önceliği (yukarıdan aşağıya):
@@ -35,53 +35,53 @@ public class GlobalExceptionHandler {
     // ------------------------------------------------------------------ //
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiResponse<Void>> handleNotFound(ResourceNotFoundException ex) {
+    public ResponseEntity<ApiResult<Void>> handleNotFound(ResourceNotFoundException ex) {
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.error(ex.getMessage(), ex.getErrorCode(), ex.getHttpStatus()));
+                .body(ApiResult.error(ex.getMessage(), ex.getErrorCode(), ex.getHttpStatus()));
     }
 
     @ExceptionHandler(AlreadyExistsException.class)
-    public ResponseEntity<ApiResponse<Void>> handleConflict(AlreadyExistsException ex) {
+    public ResponseEntity<ApiResult<Void>> handleConflict(AlreadyExistsException ex) {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
-                .body(ApiResponse.error(ex.getMessage(), ex.getErrorCode(), ex.getHttpStatus()));
+                .body(ApiResult.error(ex.getMessage(), ex.getErrorCode(), ex.getHttpStatus()));
     }
 
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<ApiResponse<Void>> handleUnauthorized(UnauthorizedException ex) {
+    public ResponseEntity<ApiResult<Void>> handleUnauthorized(UnauthorizedException ex) {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error(ex.getMessage(), ex.getErrorCode(), ex.getHttpStatus()));
+                .body(ApiResult.error(ex.getMessage(), ex.getErrorCode(), ex.getHttpStatus()));
     }
 
     @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<ApiResponse<Void>> handleForbidden(ForbiddenException ex) {
+    public ResponseEntity<ApiResult<Void>> handleForbidden(ForbiddenException ex) {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.error(ex.getMessage(), ex.getErrorCode(), ex.getHttpStatus()));
+                .body(ApiResult.error(ex.getMessage(), ex.getErrorCode(), ex.getHttpStatus()));
     }
 
     @ExceptionHandler(BusinessRuleException.class)
-    public ResponseEntity<ApiResponse<Void>> handleBusinessRule(BusinessRuleException ex) {
+    public ResponseEntity<ApiResult<Void>> handleBusinessRule(BusinessRuleException ex) {
         return ResponseEntity
                 .status(ex.getHttpStatus())
-                .body(ApiResponse.error(ex.getMessage(), ex.getErrorCode(), ex.getHttpStatus()));
+                .body(ApiResult.error(ex.getMessage(), ex.getErrorCode(), ex.getHttpStatus()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
+    public ResponseEntity<ApiResult<Void>> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
-                .body(ApiResponse.error("Bu işlem için yetkiniz yok", ErrorCodes.ACCESS_DENIED, HttpStatus.FORBIDDEN.value()));
+                .body(ApiResult.error("Bu işlem için yetkiniz yok", ErrorCodes.ACCESS_DENIED, HttpStatus.FORBIDDEN.value()));
     }
 
     // BusinessException'ın diğer alt sınıfları için genel yakalayıcı
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ApiResponse<Void>> handleBusiness(BusinessException ex) {
+    public ResponseEntity<ApiResult<Void>> handleBusiness(BusinessException ex) {
         return ResponseEntity
                 .status(ex.getHttpStatus())
-                .body(ApiResponse.error(ex.getMessage(), ex.getErrorCode(), ex.getHttpStatus()));
+                .body(ApiResult.error(ex.getMessage(), ex.getErrorCode(), ex.getHttpStatus()));
     }
 
     // ------------------------------------------------------------------ //
@@ -89,7 +89,7 @@ public class GlobalExceptionHandler {
     // ------------------------------------------------------------------ //
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Map<String, String>>> handleValidation(
+    public ResponseEntity<ApiResult<Map<String, String>>> handleValidation(
             MethodArgumentNotValidException ex) {
 
         // Merge function eklendi: aynı field'a birden fazla hata gelirse birleştirilir
@@ -106,25 +106,25 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.validationError(fieldErrors));
+                .body(ApiResult.validationError(fieldErrors));
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(ConstraintViolationException ex) {
+    public ResponseEntity<ApiResult<Void>> handleConstraintViolation(ConstraintViolationException ex) {
         String message = ex.getConstraintViolations().stream()
                 .map(v -> v.getPropertyPath() + ": " + v.getMessage())
                 .collect(Collectors.joining(", "));
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(message, ErrorCodes.VALIDATION_ERROR, HttpStatus.BAD_REQUEST.value()));
+                .body(ApiResult.error(message, ErrorCodes.VALIDATION_ERROR, HttpStatus.BAD_REQUEST.value()));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ApiResponse<Void>> handleMalformedJson(HttpMessageNotReadableException ex) {
+    public ResponseEntity<ApiResult<Void>> handleMalformedJson(HttpMessageNotReadableException ex) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(
+                .body(ApiResult.error(
                         "İstek gövdesi okunamadı — JSON formatını kontrol edin",
                         ErrorCodes.VALIDATION_ERROR,
                         HttpStatus.BAD_REQUEST.value()
@@ -136,11 +136,11 @@ public class GlobalExceptionHandler {
     // ------------------------------------------------------------------ //
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {
+    public ResponseEntity<ApiResult<Void>> handleGeneral(Exception ex) {
         log.error("Beklenmedik hata oluştu: {}", ex.getMessage(), ex);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error(
+                .body(ApiResult.error(
                         "Sunucu hatası oluştu, lütfen daha sonra tekrar deneyin",
                         ErrorCodes.INTERNAL_ERROR,
                         HttpStatus.INTERNAL_SERVER_ERROR.value()

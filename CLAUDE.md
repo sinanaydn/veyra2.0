@@ -24,7 +24,7 @@ docker-compose up -d                    # PostgreSQL + MinIO'yu Docker'da başla
 
 | Modül | Sorumluluk | Detay |
 |-------|------------|-------|
-| `veyra-core` | BaseEntity, ApiResponse, exceptions, ErrorCodes | `veyra-core/SKILL.md` |
+| `veyra-core` | BaseEntity, ApiResult, exceptions, ErrorCodes | `veyra-core/SKILL.md` |
 | `veyra-auth` | JWT auth, SecurityConfig, AdminSeeder | `veyra-auth/SKILL.md` |
 | `veyra-user` | User profile CRUD | `veyra-user/SKILL.md` |
 | `veyra-vehicle` | brand + model + car | `veyra-vehicle/SKILL.md` |
@@ -89,8 +89,8 @@ BusinessException (abstract)
 - Yazma metotları: `@Transactional`
 - Okuma metotları: `@Transactional(readOnly = true)`
 
-### `ApiResponse<T>` envelope
-Tüm endpoint'ler `ApiResponse<T>` döndürür:
+### `ApiResult<T>` envelope
+Tüm endpoint'ler `ApiResult<T>` döndürür (Swagger'ın `@ApiResponse` annotation'ı ile isim çakışmasını önlemek için `ApiResult` adı seçildi):
 ```json
 { "success": true, "status": 200, "message": "...", "data": {...}, "errorCode": null, "timestamp": "..." }
 ```

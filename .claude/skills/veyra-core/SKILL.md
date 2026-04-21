@@ -1,6 +1,6 @@
 ---
 name: veyra-core
-description: Tüm modüllerin kullandığı temel altyapı — BaseEntity, ApiResponse, exception hierarchy, ErrorCodes, GlobalExceptionHandler, ApiConstants. Hiçbir modüle bağımlı değildir.
+description: Tüm modüllerin kullandığı temel altyapı — BaseEntity, ApiResult, exception hierarchy, ErrorCodes, GlobalExceptionHandler, ApiConstants. Hiçbir modüle bağımlı değildir.
 ---
 
 ## Sorumluluk
@@ -18,8 +18,10 @@ Tüm JPA entity'leri `BaseEntity` extend eder.
 
 `@EnableJpaAuditing` `veyra-app` içinde aktif.
 
-## ApiResponse<T>
+## ApiResult<T>
 Tüm endpoint'lerin döndürdüğü zarf. Constructor private, sadece factory metotlar.
+
+> **İsimlendirme notu:** Swagger'ın `io.swagger.v3.oas.annotations.responses.ApiResponse` annotation'ı ile çakışmayı önlemek için `ApiResult` adı tercih edildi. Bu class runtime HTTP body envelope'u; Swagger'ınki compile-time doc annotation'ı — ikisi farklı katmanlardır.
 
 | Factory | HTTP | Kullanım |
 |---------|------|---------|

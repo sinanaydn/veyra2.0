@@ -200,5 +200,5 @@ return Bucket.NONE;
 ```
 
 ## Bağımlılıklar
-- `veyra-core` — `ApiResponse`, exceptions, `UserDeletedEvent`
+- `veyra-core` — `ApiResult`, exceptions, `UserDeletedEvent`
 - `veyra-user` — `UserRules`, `User` entity (register sırasında)
