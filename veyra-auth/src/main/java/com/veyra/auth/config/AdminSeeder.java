@@ -41,7 +41,16 @@ public class AdminSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         validateAdminPassword();
 
-        if (authUserRepository.existsByEmail(adminEmail)) return;
+        var existing = authUserRepository.findByEmail(adminEmail).orElse(null);
+
+        if (existing != null) {
+            if (!passwordEncoder.matches(adminPassword, existing.getPasswordHash())) {
+                existing.setPasswordHash(passwordEncoder.encode(adminPassword));
+                existing.resetFailedLoginAttempts();
+                authUserRepository.save(existing);
+            }
+            return;
+        }
 
         var userResponse = userService.create(
                 new CreateUserRequest("Admin", "Veyra", adminEmail, null));

@@ -32,7 +32,8 @@
       "Bash(javap -p com/veyra/user/mapper/UserMapperImpl.class)",
       "Bash(javap -verbose veyra-user/target/classes/com/veyra/user/mapper/UserMapperImpl.class)",
       "Bash(pkill -f \"spring-boot:run\")",
-      "Bash(pkill -f \"veyra-app\")"
+      "Bash(pkill -f \"veyra-app\")",
+      "Bash(mvn -pl veyra-auth -am compile -q)"
     ]
   }
 }
