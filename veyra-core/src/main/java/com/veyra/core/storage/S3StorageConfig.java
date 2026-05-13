@@ -12,6 +12,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
@@ -24,7 +25,8 @@ import java.net.URI;
  * Storage altyapı konfigürasyonu.
  *
  * - {@link StorageProperties}'i aktive eder (@ConfigurationProperties binding)
- * - {@link S3Client} bean'i oluşturur — MinIO, R2 ve AWS S3 ile aynı kod çalışır
+ * - {@link S3Client} bean'i — putObject/deleteObject için
+ * - {@link S3Presigner} bean'i — private bucket'tan presigned GET URL üretmek için
  * - Startup'ta bucket'ı kontrol eder, yoksa oluşturur (dev kolaylığı)
  *
  * Prod (R2) için {@code storage.s3.auto-create-bucket=false} yapılır;
@@ -40,20 +42,31 @@ public class S3StorageConfig {
 
     @Bean
     public S3Client s3Client() {
-        AwsBasicCredentials credentials = AwsBasicCredentials.create(
-                properties.accessKey(),
-                properties.secretKey()
-        );
-
-        S3Configuration s3Config = S3Configuration.builder()
-                .pathStyleAccessEnabled(properties.pathStyleAccess())
-                .build();
-
         return S3Client.builder()
                 .endpointOverride(URI.create(properties.endpoint()))
                 .region(Region.of(properties.region()))
-                .credentialsProvider(StaticCredentialsProvider.create(credentials))
-                .serviceConfiguration(s3Config)
+                .credentialsProvider(StaticCredentialsProvider.create(credentials()))
+                .serviceConfiguration(s3Config())
+                .build();
+    }
+
+    @Bean
+    public S3Presigner s3Presigner() {
+        return S3Presigner.builder()
+                .endpointOverride(URI.create(properties.endpoint()))
+                .region(Region.of(properties.region()))
+                .credentialsProvider(StaticCredentialsProvider.create(credentials()))
+                .serviceConfiguration(s3Config())
+                .build();
+    }
+
+    private AwsBasicCredentials credentials() {
+        return AwsBasicCredentials.create(properties.accessKey(), properties.secretKey());
+    }
+
+    private S3Configuration s3Config() {
+        return S3Configuration.builder()
+                .pathStyleAccessEnabled(properties.pathStyleAccess())
                 .build();
     }
 

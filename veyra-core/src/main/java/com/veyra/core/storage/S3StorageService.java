@@ -10,9 +10,14 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.UUID;
 
 /**
@@ -22,7 +27,8 @@ import java.util.UUID;
  * Önemli tasarım kararları:
  *  - storageKey random UUID ile üretilir → dosya adından bağımsız, path traversal kapanır
  *  - Orijinal dosya uzantısı korunur (browser content-type negotiation için)
- *  - Public URL DB'de tutulmaz, {@link #getPublicUrl(String)} ile türetilir
+ *  - Public URL DB'de tutulmaz, {@link #getPublicUrl(String)} her çağrıda taze
+ *    presigned GET URL üretir → bucket PRIVATE kalır, güvenli + ölçeklenebilir
  *  - Delete idempotent — var olmayan key için hata fırlatmaz (S3 zaten idempotent)
  */
 @Slf4j
@@ -31,6 +37,7 @@ import java.util.UUID;
 public class S3StorageService implements StorageService {
 
     private final S3Client s3Client;
+    private final S3Presigner s3Presigner;
     private final StorageProperties properties;
 
     @Override
@@ -91,14 +98,39 @@ public class S3StorageService implements StorageService {
         }
     }
 
+    /**
+     * Private bucket'tan geçici imzalı GET URL üretir.
+     *
+     * Bucket PRIVATE olduğu için tarayıcı direkt erişemez — bu URL,
+     * S3 v4 signature ile imzalanmış query string içerir ve TTL süresince geçerlidir.
+     * TTL dolduğunda URL otomatik invalid olur (güvenlik kazancı).
+     *
+     * URL her response'ta yeniden üretilir; DB'de tutulmaz.
+     * CDN/vendor/TTL değişimi DB migration gerektirmez.
+     */
     @Override
     public String getPublicUrl(String storageKey) {
-        // publicBaseUrl sonunda slash olsa da olmasa da çalışsın
-        String base = properties.publicBaseUrl();
-        if (base.endsWith("/")) {
-            base = base.substring(0, base.length() - 1);
+        try {
+            GetObjectRequest getRequest = GetObjectRequest.builder()
+                    .bucket(properties.bucket())
+                    .key(storageKey)
+                    .build();
+
+            GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                    .signatureDuration(Duration.ofMinutes(properties.presignedUrlTtlMinutes()))
+                    .getObjectRequest(getRequest)
+                    .build();
+
+            PresignedGetObjectRequest presigned = s3Presigner.presignGetObject(presignRequest);
+            return presigned.url().toString();
+
+        } catch (SdkException e) {
+            throw new StorageException(
+                    ErrorCodes.FILE_UPLOAD_FAILED,
+                    "Presigned URL üretilemedi: " + e.getMessage(),
+                    e
+            );
         }
-        return base + "/" + storageKey;
     }
 
     /**

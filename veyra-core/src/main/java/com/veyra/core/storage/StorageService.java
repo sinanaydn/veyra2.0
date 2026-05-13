@@ -32,14 +32,15 @@ public interface StorageService {
     void delete(String storageKey);
 
     /**
-     * storageKey'den public URL üretir.
+     * storageKey'den tarayıcının erişebileceği URL üretir.
      *
-     * Bu metot kasıtlı olarak service katmanındadır (DB'de URL tutulmaz).
-     * URL format'ı değişirse — CDN domain, vendor geçişi, signed URL'e geçiş —
-     * yalnızca bu implementation değişir; hiçbir DB migration gerekmez.
+     * Mevcut implementation (S3) PRIVATE bucket üzerinde çalışır ve
+     * her çağrıda kısa ömürlü (TTL'li) **presigned GET URL** üretir.
+     * Bu metot kasıtlı olarak service katmanındadır — URL DB'de tutulmaz,
+     * vendor/CDN/imzalama stratejisi değişimi DB migration gerektirmez.
      *
      * @param storageKey Dosyanın kalıcı kimliği
-     * @return           Tarayıcının erişebileceği tam URL
+     * @return           Tarayıcının erişebileceği tam URL (TTL süresince geçerli)
      */
     String getPublicUrl(String storageKey);
 }
